@@ -1,0 +1,33 @@
+# Claude Code
+.claude/
+
+# Build results
+bin/
+obj/
+
+# NuGet
+*.nupkg
+packages/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Rider
+.idea/
+
+# Logs
+Logs/
+*.log
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# NLog internal log
+nlog-internal.log
+nul

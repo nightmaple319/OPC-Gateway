@@ -1,0 +1,55 @@
+{
+  "OPCDAConfig": {
+    "ServerName": "Matrikon.OPC.Simulation.1",
+    "ServerProgId": "Matrikon.OPC.Simulation",
+    "UpdateRate": 1000,
+    "UseLocalHost": true,
+    "HostName": "localhost"
+  },
+  "OPCUAConfig": {
+    "ServerName": "OPC Gateway Server",
+    "Port": 4840,
+    "ApplicationName": "OPC DA to UA Gateway",
+    "ApplicationUri": "urn:localhost:OPCGateway",
+    "EnableSecurity": false,
+    "MaxClients": 100
+  },
+  "ItemMappings": [
+    {
+      "OPCDAItemId": "Random.Int1",
+      "OPCUANodeId": "Gateway.Random_Int1",
+      "OPCUABrowseName": "Random_Int1",
+      "IsEnabled": true
+    },
+    {
+      "OPCDAItemId": "Random.Real4",
+      "OPCUANodeId": "Gateway.Random_Real4",
+      "OPCUABrowseName": "Random_Real4",
+      "IsEnabled": true
+    },
+    {
+      "OPCDAItemId": "Saw-toothed Waves.Int1",
+      "OPCUANodeId": "Gateway.Sawtooth_Int1",
+      "OPCUABrowseName": "Sawtooth_Int1",
+      "IsEnabled": true
+    },
+    {
+      "OPCDAItemId": "Sine Waves.Real4",
+      "OPCUANodeId": "Gateway.Sine_Real4",
+      "OPCUABrowseName": "Sine_Real4",
+      "IsEnabled": true
+    },
+    {
+      "OPCDAItemId": "Triangle Waves.Real4",
+      "OPCUANodeId": "Gateway.Triangle_Real4",
+      "OPCUABrowseName": "Triangle_Real4",
+      "IsEnabled": true
+    }
+  ],
+  "LoggingConfig": {
+    "LogLevel": "Info",
+    "LogFilePath": "Logs/gateway.log",
+    "MaxFileSize": 10,
+    "MaxFiles": 5
+  }
+}
