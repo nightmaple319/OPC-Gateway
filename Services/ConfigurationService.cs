@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using OPCGatewayTool.Models;
@@ -48,7 +50,13 @@ namespace OPCGatewayTool.Services
                 else
                 {
                     // 驗證配置
-                    ValidateConfiguration(config);
+                    var validationErrors = ValidateConfiguration(config);
+                    if (validationErrors.Count > 0)
+                    {
+                        var errorDetail = string.Join("\n", validationErrors);
+                        logger.Warn($"配置驗證有錯誤:\n{errorDetail}");
+                        LogMessage?.Invoke(this, $"配置驗證警告: {string.Join("; ", validationErrors)}");
+                    }
                     logger.Info("配置文件載入成功");
                 }
 
@@ -97,7 +105,14 @@ namespace OPCGatewayTool.Services
                 }
 
                 // 驗證配置
-                ValidateConfiguration(config);
+                var validationErrors = ValidateConfiguration(config);
+                if (validationErrors.Count > 0)
+                {
+                    var errorDetail = string.Join("; ", validationErrors);
+                    logger.Error($"配置驗證失敗，無法保存: {errorDetail}");
+                    LogMessage?.Invoke(this, $"保存失敗 — {errorDetail}");
+                    return false;
+                }
 
                 // 序列化配置
                 var json = JsonConvert.SerializeObject(config, Formatting.Indented);
@@ -234,44 +249,64 @@ namespace OPCGatewayTool.Services
             }
         }
 
-        private void ValidateConfiguration(GatewayConfig config)
+        /// <summary>
+        /// 驗證配置並自動修正可修正的欄位。
+        /// 回傳驗證錯誤列表（嚴重錯誤），空列表代表通過。
+        /// </summary>
+        private List<string> ValidateConfiguration(GatewayConfig config)
         {
+            var errors = new List<string>();
+
             if (config == null)
-                throw new ArgumentNullException(nameof(config), "配置不能為空");
+            {
+                errors.Add("配置物件為 null");
+                return errors;
+            }
 
-            // 驗證 OPC DA 配置
+            // ---- OPC DA ----
             if (config.OPCDAConfig == null)
-                throw new InvalidOperationException("OPC DA 配置不能為空");
+            {
+                errors.Add("OPC DA 配置區段遺失");
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(config.OPCDAConfig.ServerName))
+                    errors.Add("OPC DA 伺服器名稱不能為空");
 
-            if (string.IsNullOrWhiteSpace(config.OPCDAConfig.ServerName))
-                throw new InvalidOperationException("OPC DA 伺服器名稱不能為空");
+                if (string.IsNullOrWhiteSpace(config.OPCDAConfig.HostName))
+                    config.OPCDAConfig.HostName = "localhost";
 
-            if (string.IsNullOrWhiteSpace(config.OPCDAConfig.HostName))
-                config.OPCDAConfig.HostName = "localhost";
+                if (config.OPCDAConfig.UpdateRate <= 0)
+                    config.OPCDAConfig.UpdateRate = 1000;
+            }
 
-            if (config.OPCDAConfig.UpdateRate <= 0)
-                config.OPCDAConfig.UpdateRate = 1000;
-
-            // 驗證 OPC UA 配置
+            // ---- OPC UA ----
             if (config.OPCUAConfig == null)
-                throw new InvalidOperationException("OPC UA 配置不能為空");
+            {
+                errors.Add("OPC UA 配置區段遺失");
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(config.OPCUAConfig.ServerName))
+                    errors.Add("OPC UA 伺服器名稱不能為空");
 
-            if (string.IsNullOrWhiteSpace(config.OPCUAConfig.ServerName))
-                throw new InvalidOperationException("OPC UA 伺服器名稱不能為空");
+                if (string.IsNullOrWhiteSpace(config.OPCUAConfig.ApplicationName))
+                    config.OPCUAConfig.ApplicationName = "OPC Gateway";
 
-            if (string.IsNullOrWhiteSpace(config.OPCUAConfig.ApplicationName))
-                config.OPCUAConfig.ApplicationName = "OPC Gateway";
+                if (string.IsNullOrWhiteSpace(config.OPCUAConfig.ApplicationUri))
+                    config.OPCUAConfig.ApplicationUri = "urn:localhost:OPCGateway";
 
-            if (string.IsNullOrWhiteSpace(config.OPCUAConfig.ApplicationUri))
-                config.OPCUAConfig.ApplicationUri = "urn:localhost:OPCGateway";
+                if (config.OPCUAConfig.Port <= 0 || config.OPCUAConfig.Port > 65535)
+                {
+                    logger.Warn($"OPC UA 端口 {config.OPCUAConfig.Port} 無效，已修正為 4840");
+                    config.OPCUAConfig.Port = 4840;
+                }
 
-            if (config.OPCUAConfig.Port <= 0 || config.OPCUAConfig.Port > 65535)
-                config.OPCUAConfig.Port = 4840;
+                if (config.OPCUAConfig.MaxClients <= 0)
+                    config.OPCUAConfig.MaxClients = 100;
+            }
 
-            if (config.OPCUAConfig.MaxClients <= 0)
-                config.OPCUAConfig.MaxClients = 100;
-
-            // 驗證日誌配置
+            // ---- Logging ----
             if (config.LoggingConfig == null)
                 config.LoggingConfig = new LoggingConfig();
 
@@ -281,15 +316,19 @@ namespace OPCGatewayTool.Services
             if (string.IsNullOrWhiteSpace(config.LoggingConfig.LogFilePath))
                 config.LoggingConfig.LogFilePath = "Logs/gateway.log";
 
-            // 驗證項目映射
+            // ---- Item Mappings ----
             if (config.ItemMappings == null)
                 config.ItemMappings = new System.Collections.Generic.List<ItemMapping>();
 
-            // 驗證每個映射
-            foreach (var mapping in config.ItemMappings)
+            for (int i = config.ItemMappings.Count - 1; i >= 0; i--)
             {
+                var mapping = config.ItemMappings[i];
                 if (string.IsNullOrWhiteSpace(mapping.OPCDAItemId))
-                    throw new InvalidOperationException("OPC DA 項目 ID 不能為空");
+                {
+                    logger.Warn($"映射 #{i} 的 OPC DA 項目 ID 為空，已移除");
+                    config.ItemMappings.RemoveAt(i);
+                    continue;
+                }
 
                 if (string.IsNullOrWhiteSpace(mapping.OPCUABrowseName))
                     mapping.OPCUABrowseName = mapping.OPCDAItemId.Replace(".", "_");
@@ -298,7 +337,12 @@ namespace OPCGatewayTool.Services
                     mapping.OPCUANodeId = $"Gateway.{mapping.OPCUABrowseName}";
             }
 
-            logger.Debug("配置驗證通過");
+            if (errors.Count == 0)
+                logger.Debug("配置驗證通過");
+            else
+                logger.Warn($"配置驗證發現 {errors.Count} 個錯誤: {string.Join("; ", errors)}");
+
+            return errors;
         }
     }
 }

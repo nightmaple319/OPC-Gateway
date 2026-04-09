@@ -43,14 +43,23 @@ namespace OPCGatewayTool.Services
         {
             _opcDaService = opcDaService ?? throw new ArgumentNullException(nameof(opcDaService));
             _opcUaService = opcUaService ?? throw new ArgumentNullException(nameof(opcUaService));
-            
+
             _mappings = new ConcurrentDictionary<string, ItemMapping>();
             Mappings = new ObservableCollection<ItemMapping>();
-            
-            // 訂閱OPC DA數據變更事件
-            _opcDaService.DataChanged += OnOPCDADataChanged;
-            
-            logger.Info("數據映射服務已初始化");
+
+            try
+            {
+                // 訂閱OPC DA數據變更事件
+                _opcDaService.DataChanged += OnOPCDADataChanged;
+
+                logger.Info("數據映射服務已初始化");
+            }
+            catch
+            {
+                // 建構子失敗時確保事件已解除
+                _opcDaService.DataChanged -= OnOPCDADataChanged;
+                throw;
+            }
         }
 
         public bool AddMapping(string opcDaItemId, string opcUaBrowseName, string opcUaNodeId = null)

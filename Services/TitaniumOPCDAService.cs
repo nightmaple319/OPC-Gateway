@@ -263,14 +263,7 @@ namespace OPCGatewayTool.Services
                     var elementsList = elements.ToList(); // 轉換為 List 以便重複枚舉
                     logger.Info($"從 OPC 伺服器獲得 {elementsList.Count} 個元素");
                     
-                    // 記錄所有原始元素
-                    logger.Info("=== OPC 服務器返回的原始元素清單 ===");
-                    for (int i = 0; i < elementsList.Count; i++)
-                    {
-                        var element = elementsList[i];
-                        logger.Info($"元素 #{i+1}: ItemId='{element.ItemId}', Name='{element.Name}', HasChildren={element.HasChildren}");
-                    }
-                    logger.Info("=== 原始元素清單結束 ===");
+                    logger.Debug($"OPC 伺服器回傳 {elementsList.Count} 個根元素");
                     
                     int nodeCount = 0;
                     foreach (var element in elementsList)
@@ -609,7 +602,7 @@ namespace OPCGatewayTool.Services
                     if (results.Length > 0 && results[0].Error.Succeeded)
                     {
                         var result = results[0];
-                        
+
                         var newItem = new OPCDAItem
                         {
                             ItemId = itemId,
@@ -625,9 +618,17 @@ namespace OPCGatewayTool.Services
                         LogMessage?.Invoke(this, $"添加項目: {itemId}");
                         return true;
                     }
+                    else if (results.Length == 0)
+                    {
+                        logger.Error($"添加項目失敗: {itemId}，OPC 群組未回傳任何結果 (可能群組未連接或 ItemId 無效)");
+                        LogMessage?.Invoke(this, $"添加項目失敗: {itemId} (無回傳結果)");
+                        return false;
+                    }
                     else
                     {
-                        logger.Error($"添加項目失敗: {itemId}, 錯誤: {results[0]?.Error}");
+                        var errorCode = results[0]?.Error;
+                        logger.Error($"添加項目失敗: {itemId}，錯誤碼: {errorCode} (HResult: 0x{errorCode?.GetHashCode():X8})");
+                        LogMessage?.Invoke(this, $"添加項目失敗: {itemId} ({errorCode})");
                         return false;
                     }
                 }
@@ -675,22 +676,34 @@ namespace OPCGatewayTool.Services
         {
             try
             {
+                var dispatcher = System.Windows.Application.Current?.Dispatcher;
+
                 foreach (var itemValue in e.Values)
                 {
-                    var item = Items.FirstOrDefault(x => x.ClientHandle == itemValue.Item.ClientHandle);
+                    // 在 UI 執行緒上安全存取 Items 集合
+                    OPCDAItem item = null;
+                    if (dispatcher != null && !dispatcher.CheckAccess())
+                    {
+                        item = dispatcher.Invoke(() =>
+                            Items.FirstOrDefault(x => x.ClientHandle == itemValue.Item.ClientHandle));
+                    }
+                    else
+                    {
+                        item = Items.FirstOrDefault(x => x.ClientHandle == itemValue.Item.ClientHandle);
+                    }
+
                     if (item != null)
                     {
                         item.Value = itemValue.Value;
                         item.Quality = (short)itemValue.Quality;
                         item.Timestamp = itemValue.Timestamp.DateTime;
-                        
+
                         if (itemValue.Value != null)
                         {
                             item.DataType = itemValue.Value.GetType().Name;
                         }
 
                         DataChanged?.Invoke(this, item);
-                        logger.Debug($"項目值更新: {item.ItemId} = {item.Value}");
                     }
                 }
             }

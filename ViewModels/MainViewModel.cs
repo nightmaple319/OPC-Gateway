@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -31,6 +32,7 @@ namespace OPCGatewayTool.ViewModels
         private bool _isOPCDAConnected;
         private bool _isOPCUARunning;
         private bool _isMappingEnabled;
+        private readonly StringBuilder _logBuilder = new StringBuilder();
         private string _logMessages = "";
         private DateTime _currentTime = DateTime.Now;
         private bool _disposed;
@@ -559,6 +561,10 @@ namespace OPCGatewayTool.ViewModels
 
         private void ClearLog()
         {
+            lock (_logBuilder)
+            {
+                _logBuilder.Clear();
+            }
             LogMessages = "";
         }
         
@@ -640,18 +646,38 @@ namespace OPCGatewayTool.ViewModels
             OnPropertyChanged(nameof(OPCUANodeCount));
             OnPropertyChanged(nameof(ActiveMappingCount));
             OnPropertyChanged(nameof(ConnectedClientCount));
+
+            // 批次刷新日誌到 UI（每秒一次，而非每筆訊息）
+            if (_logDirty)
+            {
+                _logDirty = false;
+                lock (_logBuilder)
+                {
+                    LogMessages = _logBuilder.ToString();
+                }
+            }
         }
+
+        private volatile bool _logDirty;
 
         private void AddLogMessage(string message)
         {
             var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            LogMessages += $"[{timestamp}] {message}\n";
-            
-            // 限制日誌長度
-            if (LogMessages.Length > 50000)
+
+            lock (_logBuilder)
             {
-                LogMessages = LogMessages.Substring(LogMessages.Length - 40000);
+                _logBuilder.AppendLine($"[{timestamp}] {message}");
+
+                // 限制日誌長度
+                if (_logBuilder.Length > 50000)
+                {
+                    var text = _logBuilder.ToString();
+                    _logBuilder.Clear();
+                    _logBuilder.Append(text.Substring(text.Length - 40000));
+                }
             }
+
+            _logDirty = true;
         }
 
         #endregion
@@ -778,8 +804,12 @@ namespace OPCGatewayTool.ViewModels
                     {
                         logger.Info("MainViewModel 正在清理資源...");
 
-                        // 停止UI更新計時器
-                        _uiUpdateTimer?.Stop();
+                        // 停止並釋放UI更新計時器
+                        if (_uiUpdateTimer != null)
+                        {
+                            _uiUpdateTimer.Stop();
+                            _uiUpdateTimer.Tick -= UpdateUI;
+                        }
 
                         // 取消事件訂閱
                         _opcDaService.ConnectionStatusChanged -= OnOPCDAConnectionStatusChanged;

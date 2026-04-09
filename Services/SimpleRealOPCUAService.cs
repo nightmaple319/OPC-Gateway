@@ -483,11 +483,13 @@ namespace OPCGatewayTool.Services
         {
             if (!_disposed)
             {
+                _disposed = true;
                 Stop();
                 StopSessionMonitoring();
                 _server?.Dispose();
+                _server = null;
                 _application?.Stop();
-                _disposed = true;
+                _application = null;
             }
         }
     }
@@ -524,38 +526,53 @@ namespace OPCGatewayTool.Services
             {
                 var currentSessions = CurrentInstance?.SessionManager?.GetSessions()?.ToList() ?? new List<Session>();
                 var currentSessionIds = currentSessions.Select(s => s.Id.ToString()).ToHashSet();
-                
-                // 移除已斷開的客戶端
-                var disconnectedClients = _service.ConnectedClients.Where(c => !currentSessionIds.Contains(c.SessionId)).ToList();
-                foreach (var client in disconnectedClients)
+
+                var dispatcher = System.Windows.Application.Current?.Dispatcher;
+                if (dispatcher == null) return;
+
+                dispatcher.BeginInvoke(new Action(() =>
                 {
-                    _service.ConnectedClients.Remove(client);
-                    _service.OnClientDisconnected(client.SessionId);
-                    logger.Info($"客戶端斷開連接: {client.DisplayName}");
-                }
-                
-                // 添加新連接的客戶端
-                var existingSessionIds = _service.ConnectedClients.Select(c => c.SessionId).ToHashSet();
-                foreach (var session in currentSessions)
-                {
-                    if (!existingSessionIds.Contains(session.Id.ToString()))
+                    try
                     {
-                        var clientInfo = new ClientInfo
+                        // 移除已斷開的客戶端
+                        var disconnectedClients = _service.ConnectedClients
+                            .Where(c => !currentSessionIds.Contains(c.SessionId)).ToList();
+                        foreach (var client in disconnectedClients)
                         {
-                            SessionId = session.Id.ToString(),
-                            ClientName = "Connected Client",
-                            EndpointUrl = _service.EndpointUrl ?? "Unknown",
-                            ConnectedTime = DateTime.Now,
-                            UserIdentity = "Anonymous",
-                            SubscriptionCount = 0,
-                            SessionTimeout = TimeSpan.FromMinutes(60)
-                        };
-                        
-                        _service.ConnectedClients.Add(clientInfo);
-                        _service.OnClientConnected(clientInfo);
-                        logger.Info($"新客戶端連接: {clientInfo.DisplayName}");
+                            _service.ConnectedClients.Remove(client);
+                            _service.OnClientDisconnected(client.SessionId);
+                            logger.Info($"客戶端斷開連接: {client.DisplayName}");
+                        }
+
+                        // 添加新連接的客戶端
+                        var existingSessionIds = _service.ConnectedClients
+                            .Select(c => c.SessionId).ToHashSet();
+                        foreach (var session in currentSessions)
+                        {
+                            if (!existingSessionIds.Contains(session.Id.ToString()))
+                            {
+                                var clientInfo = new ClientInfo
+                                {
+                                    SessionId = session.Id.ToString(),
+                                    ClientName = "Connected Client",
+                                    EndpointUrl = _service.EndpointUrl ?? "Unknown",
+                                    ConnectedTime = DateTime.Now,
+                                    UserIdentity = "Anonymous",
+                                    SubscriptionCount = 0,
+                                    SessionTimeout = TimeSpan.FromMinutes(60)
+                                };
+
+                                _service.ConnectedClients.Add(clientInfo);
+                                _service.OnClientConnected(clientInfo);
+                                logger.Info($"新客戶端連接: {clientInfo.DisplayName}");
+                            }
+                        }
                     }
-                }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, "在UI執行緒更新客戶端信息時發生錯誤");
+                    }
+                }));
             }
             catch (Exception ex)
             {
