@@ -231,6 +231,7 @@ namespace OPCGatewayTool.Services
                 
                 var memTarget = new MemoryTarget("memoryTarget");
                 memTarget.Layout = "${longdate} ${uppercase:${level}} ${logger} ${message} ${exception:format=tostring}";
+                memTarget.MaxLogsCount = 5000;
                 
                 config.AddTarget(memTarget);
                 config.AddRule(NLog.LogLevel.Debug, NLog.LogLevel.Fatal, memTarget);

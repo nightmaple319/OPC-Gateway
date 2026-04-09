@@ -27,6 +27,8 @@ namespace OPCGatewayTool.Models
         private int _updateRate = 1000;
         private bool _useLocalHost = true;
         private string _hostName = "localhost";
+        private int _connectionTimeoutSeconds = 10;
+        private int _reconnectIntervalSeconds = 30;
 
         public string ServerName
         {
@@ -78,6 +80,26 @@ namespace OPCGatewayTool.Models
             }
         }
 
+        public int ConnectionTimeoutSeconds
+        {
+            get => _connectionTimeoutSeconds;
+            set
+            {
+                _connectionTimeoutSeconds = value > 0 ? value : 10;
+                OnPropertyChanged(nameof(ConnectionTimeoutSeconds));
+            }
+        }
+
+        public int ReconnectIntervalSeconds
+        {
+            get => _reconnectIntervalSeconds;
+            set
+            {
+                _reconnectIntervalSeconds = value > 0 ? value : 30;
+                OnPropertyChanged(nameof(ReconnectIntervalSeconds));
+            }
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged(string propertyName)
@@ -94,6 +116,7 @@ namespace OPCGatewayTool.Models
         private string _applicationUri = "urn:localhost:OPCGateway";
         private bool _enableSecurity = false;
         private int _maxClients = 100;
+        private int _sessionCheckIntervalMs = 2000;
 
         public string ServerName
         {
@@ -110,8 +133,11 @@ namespace OPCGatewayTool.Models
             get => _port;
             set
             {
-                _port = value;
-                OnPropertyChanged(nameof(Port));
+                if (value >= 1 && value <= 65535)
+                {
+                    _port = value;
+                    OnPropertyChanged(nameof(Port));
+                }
             }
         }
 
@@ -152,6 +178,16 @@ namespace OPCGatewayTool.Models
             {
                 _maxClients = value;
                 OnPropertyChanged(nameof(MaxClients));
+            }
+        }
+
+        public int SessionCheckIntervalMs
+        {
+            get => _sessionCheckIntervalMs;
+            set
+            {
+                _sessionCheckIntervalMs = value > 0 ? value : 2000;
+                OnPropertyChanged(nameof(SessionCheckIntervalMs));
             }
         }
 

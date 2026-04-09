@@ -223,6 +223,7 @@ namespace OPCGatewayTool.ViewModels
             _dataMappingService.MappingRemoved += OnMappingRemoved;
             _dataMappingService.DataMapped += OnDataMapped;
             _dataMappingService.LogMessage += OnLogMessage;
+            _dataMappingService.MappingSetupFailed += OnMappingSetupFailed;
         }
 
         private void LoadDefaultConfiguration()
@@ -244,9 +245,11 @@ namespace OPCGatewayTool.ViewModels
             {
                 AddLogMessage("正在連接 OPC DA 伺服器...");
                 
+                _opcDaService.ReconnectIntervalSeconds = OPCDAConfig.ReconnectIntervalSeconds;
                 var success = await _opcDaService.ConnectAsync(
-                    OPCDAConfig.ServerName, 
-                    OPCDAConfig.HostName);
+                    OPCDAConfig.ServerName,
+                    OPCDAConfig.HostName,
+                    OPCDAConfig.ConnectionTimeoutSeconds);
                 
                 if (success)
                 {
@@ -784,6 +787,11 @@ namespace OPCGatewayTool.ViewModels
             AddLogMessage(message);
         }
 
+        private void OnMappingSetupFailed(object sender, string message)
+        {
+            AddLogMessage($"[映射警告] {message}");
+        }
+
         #endregion
 
         #region IDisposable
@@ -826,6 +834,7 @@ namespace OPCGatewayTool.ViewModels
                         _dataMappingService.MappingRemoved -= OnMappingRemoved;
                         _dataMappingService.DataMapped -= OnDataMapped;
                         _dataMappingService.LogMessage -= OnLogMessage;
+                        _dataMappingService.MappingSetupFailed -= OnMappingSetupFailed;
 
                         // 停止所有服務
                         if (IsOPCUARunning)

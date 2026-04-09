@@ -146,7 +146,9 @@ namespace OPCGatewayTool.Services
                     ServerProgId = "Matrikon.OPC.Simulation",
                     HostName = "localhost",
                     UpdateRate = 1000,
-                    UseLocalHost = true
+                    UseLocalHost = true,
+                    ConnectionTimeoutSeconds = 10,
+                    ReconnectIntervalSeconds = 30
                 },
                 OPCUAConfig = new OPCUAConfig
                 {
@@ -155,7 +157,8 @@ namespace OPCGatewayTool.Services
                     ApplicationUri = "urn:localhost:OPCGateway",
                     Port = 4840,
                     EnableSecurity = false,
-                    MaxClients = 100
+                    MaxClients = 100,
+                    SessionCheckIntervalMs = 2000
                 },
                 LoggingConfig = new LoggingConfig
                 {
@@ -278,6 +281,12 @@ namespace OPCGatewayTool.Services
 
                 if (config.OPCDAConfig.UpdateRate <= 0)
                     config.OPCDAConfig.UpdateRate = 1000;
+
+                if (config.OPCDAConfig.ConnectionTimeoutSeconds <= 0)
+                    config.OPCDAConfig.ConnectionTimeoutSeconds = 10;
+
+                if (config.OPCDAConfig.ReconnectIntervalSeconds <= 0)
+                    config.OPCDAConfig.ReconnectIntervalSeconds = 30;
             }
 
             // ---- OPC UA ----
@@ -304,6 +313,9 @@ namespace OPCGatewayTool.Services
 
                 if (config.OPCUAConfig.MaxClients <= 0)
                     config.OPCUAConfig.MaxClients = 100;
+
+                if (config.OPCUAConfig.SessionCheckIntervalMs <= 0)
+                    config.OPCUAConfig.SessionCheckIntervalMs = 2000;
             }
 
             // ---- Logging ----

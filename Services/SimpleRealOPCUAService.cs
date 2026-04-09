@@ -29,7 +29,8 @@ namespace OPCGatewayTool.Services
         private bool _isRunning;
         private bool _disposed;
         private Timer _sessionCheckTimer;
-        
+        private int _sessionCheckIntervalMs = 2000;
+
         public event EventHandler<bool> ServerStatusChanged;
         public event EventHandler<int> ClientCountChanged;
         public event EventHandler<string> LogMessage;
@@ -110,6 +111,9 @@ namespace OPCGatewayTool.Services
                 EndpointUrl = GetPrimaryEndpointUrl(config.Port);
                 IsRunning = true;
                 
+                // 設置會話監控間隔
+                _sessionCheckIntervalMs = config.SessionCheckIntervalMs > 0 ? config.SessionCheckIntervalMs : 2000;
+
                 // 啟動會話監控計時器
                 StartSessionMonitoring();
                 
@@ -442,7 +446,7 @@ namespace OPCGatewayTool.Services
 
         private void StartSessionMonitoring()
         {
-            _sessionCheckTimer = new Timer(2000); // 每2秒檢查一次
+            _sessionCheckTimer = new Timer(_sessionCheckIntervalMs);
             _sessionCheckTimer.Elapsed += CheckSessionCount;
             _sessionCheckTimer.AutoReset = true;
             _sessionCheckTimer.Start();

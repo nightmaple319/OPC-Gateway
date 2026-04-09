@@ -23,6 +23,7 @@ namespace OPCGatewayTool.Services
         public event EventHandler<ItemMapping> MappingRemoved;
         public event EventHandler<DataMappingEventArgs> DataMapped;
         public event EventHandler<string> LogMessage;
+        public event EventHandler<string> MappingSetupFailed;
 
         public ObservableCollection<ItemMapping> Mappings { get; }
         
@@ -302,9 +303,13 @@ namespace OPCGatewayTool.Services
                 }
                 else
                 {
-                    logger.Warn($"映射設置部分失敗: {mapping.OPCDAItemId} -> {mapping.OPCUABrowseName}");
+                    var detail = !opcDaAdded && !opcUaAdded ? "OPC DA 及 OPC UA 均失敗"
+                               : !opcDaAdded ? "OPC DA 添加失敗"
+                               : "OPC UA 節點添加失敗";
+                    logger.Warn($"映射設置部分失敗: {mapping.OPCDAItemId} -> {mapping.OPCUABrowseName} ({detail})");
+                    MappingSetupFailed?.Invoke(this, $"{mapping.OPCDAItemId}: {detail}");
                 }
-                
+
                 return success;
             }
             catch (Exception ex)

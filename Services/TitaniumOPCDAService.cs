@@ -45,6 +45,7 @@ namespace OPCGatewayTool.Services
 
         public string ServerName { get; private set; }
         public string HostName { get; private set; }
+        public int ReconnectIntervalSeconds { get; set; } = 30;
 
         static TitaniumOPCDAService()
         {
@@ -52,12 +53,12 @@ namespace OPCGatewayTool.Services
             LogManager.GetCurrentClassLogger().Info("TitaniumAS.Opc.Client 準備就緒");
         }
 
-        public async Task<bool> ConnectAsync(string serverName, string hostName = "localhost")
+        public async Task<bool> ConnectAsync(string serverName, string hostName = "localhost", int timeoutSeconds = 10)
         {
-            return await Task.Run(() => Connect(serverName, hostName));
+            return await Task.Run(() => Connect(serverName, hostName, timeoutSeconds));
         }
 
-        public bool Connect(string serverName, string hostName = "localhost")
+        public bool Connect(string serverName, string hostName = "localhost", int timeoutSeconds = 10)
         {
             try
             {
@@ -86,8 +87,14 @@ namespace OPCGatewayTool.Services
                     var uri = UrlBuilder.Build(ServerName, HostName);
                     _opcServer = new OpcDaServer(uri);
                     
-                    logger.Debug("正在連接到伺服器...");
-                    _opcServer.Connect();
+                    logger.Debug($"正在連接到伺服器 (超時: {timeoutSeconds}秒)...");
+                    var connectTask = Task.Run(() => _opcServer.Connect());
+                    if (!connectTask.Wait(TimeSpan.FromSeconds(timeoutSeconds)))
+                    {
+                        _opcServer?.Dispose();
+                        _opcServer = null;
+                        throw new TimeoutException($"連接 OPC DA 伺服器超時 ({timeoutSeconds}秒)");
+                    }
                     logger.Debug("伺服器連接成功，正在創建群組...");
 
                     // 創建群組
@@ -274,6 +281,7 @@ namespace OPCGatewayTool.Services
                         if (nodeCount >= 100)
                         {
                             logger.Warn("達到最大節點數量限制，停止創建更多節點");
+                            LogMessage?.Invoke(this, "根節點數量已達上限 (100)，部分項目未顯示");
                             break;
                         }
                         
@@ -336,106 +344,75 @@ namespace OPCGatewayTool.Services
 
             try
             {
+                // 在鎖內完成 OPC 伺服器查詢，收集結果到臨時列表
+                var elementsToAdd = new List<OPCTreeNode>();
+                bool truncated = false;
+
                 lock (_lockObject)
                 {
                     logger.Debug($"載入子節點: {parentNode.FullPath}");
-                    
-                    // 再次檢查是否已載入（雙重檢查模式）
+
                     if (parentNode.IsLoaded)
                     {
                         logger.Debug($"節點 {parentNode.FullPath} 在等待期間已被載入");
                         return;
                     }
-                    
+
                     var browser = new OpcDaBrowserAuto(_opcServer);
                     var elements = browser.GetElements(parentNode.FullPath);
-                    
-                    // 先收集到臨時列表，避免在枚舉時修改集合
-                    var elementsToAdd = new List<OPCTreeNode>();
-                    var seenItemIds = new HashSet<string>(); // 防重複
-                    var seenNodesByName = new Dictionary<string, OPCTreeNode>(); // 按顯示名稱去重
-                    
-                    logger.Info($"從 OPC 伺服器獲得 {elements.Count()} 個子元素，父節點: {parentNode.FullPath}");
-                    
+
+                    var seenItemIds = new HashSet<string>();
+                    var seenNodesByName = new Dictionary<string, OPCTreeNode>();
+
                     int childCount = 0;
                     foreach (var element in elements)
                     {
-                        logger.Debug($"處理子元素: ItemId='{element.ItemId}', Name='{element.Name}', HasChildren={element.HasChildren}");
-                        
-                        // 限制子節點數量
-                        if (childCount >= 50)
+                        if (childCount >= 200)
                         {
-                            logger.Warn($"達到子節點數量限制: {parentNode.FullPath}");
+                            logger.Warn($"達到子節點數量上限 (200): {parentNode.FullPath}");
+                            truncated = true;
                             break;
                         }
-                        
-                        // 防止完全相同的 ItemId 重複
+
                         if (seenItemIds.Contains(element.ItemId))
-                        {
-                            logger.Warn($"發現重複子節點 ItemId，跳過: {element.ItemId}");
                             continue;
-                        }
                         seenItemIds.Add(element.ItemId);
-                        
+
                         var nodeName = GetNodeDisplayName(element.ItemId);
-                        
-                        // 額外檢查：防止相同顯示名稱的節點重複
                         var nodeKey = $"{nodeName}_{element.HasChildren}";
                         if (seenNodesByName.ContainsKey(nodeKey))
-                        {
-                            logger.Warn($"發現重複顯示名稱的子節點，跳過: '{nodeName}' (ItemId: {element.ItemId})");
-                            logger.Warn($"原有子節點 ItemId: {seenNodesByName[nodeKey].FullPath}");
                             continue;
-                        }
-                        
+
                         var childNode = new OPCTreeNode(nodeName, element.ItemId, element.HasChildren);
                         seenNodesByName[nodeKey] = childNode;
-                        
                         elementsToAdd.Add(childNode);
                         childCount++;
-                        logger.Info($"準備添加子節點 #{childCount}: '{nodeName}' 到父節點 '{parentNode.FullPath}' (HashCode: {childNode.GetHashCode()})");
                     }
-                    
-                    // 在UI線程上安全地更新集合
-                    System.Windows.Application.Current?.Dispatcher.Invoke(() =>
-                    {
-                        // 先檢查是否已經載入，避免重複操作
-                        if (!parentNode.IsLoaded)
-                        {
-                            try
-                            {
-                                // 安全地記錄清除前的狀態，避免並發枚舉
-                                var beforeCount = parentNode.Children.Count;
-                                logger.Info($"===== 開始更新父節點 '{parentNode.FullPath}' =====");
-                                logger.Info($"清除前有 {beforeCount} 個子節點");
-                                
-                                // 直接清除所有子節點（包括佔位符）
-                                parentNode.Children.Clear();
-                                logger.Info($"已清除所有現有子節點");
-                                
-                                // 添加新的子節點
-                                int addedCount = 0;
-                                foreach (var childNode in elementsToAdd)
-                                {
-                                    parentNode.Children.Add(childNode);
-                                    addedCount++;
-                                    logger.Info($"已添加子節點 #{addedCount}: '{childNode.Name}' (FullPath: {childNode.FullPath})");
-                                }
-                                
-                                parentNode.IsLoaded = true;
-                                logger.Info($"===== 完成載入，父節點 '{parentNode.FullPath}' 現在有 {parentNode.Children.Count} 個子節點 =====");
-                            }
-                            catch (Exception dispatcherEx)
-                            {
-                                logger.Error(dispatcherEx, $"在UI線程更新子節點時發生錯誤: {parentNode.FullPath}");
-                            }
-                        }
-                        else
-                        {
-                            logger.Warn($"節點 {parentNode.FullPath} 已載入，跳過重複操作");
-                        }
-                    });
+
+                    logger.Debug($"查詢到 {elementsToAdd.Count} 個子節點: {parentNode.FullPath}");
                 }
+                // 鎖已釋放
+                if (truncated)
+                    LogMessage?.Invoke(this, $"節點 '{parentNode.Name}' 的子項目已達上限 (200)，部分項目未顯示");
+                // 使用 BeginInvoke 避免死鎖
+                System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (parentNode.IsLoaded) return;
+                    try
+                    {
+                        parentNode.Children.Clear();
+                        foreach (var childNode in elementsToAdd)
+                        {
+                            parentNode.Children.Add(childNode);
+                        }
+                        parentNode.IsLoaded = true;
+                        logger.Debug($"UI 已更新: '{parentNode.FullPath}' ({parentNode.Children.Count} 個子節點)");
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, $"在UI線程更新子節點時發生錯誤: {parentNode.FullPath}");
+                    }
+                }));
             }
             catch (Exception ex)
             {
@@ -717,7 +694,8 @@ namespace OPCGatewayTool.Services
         {
             if (_reconnectTimer == null)
             {
-                _reconnectTimer = new Timer(CheckConnection, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+                var interval = TimeSpan.FromSeconds(ReconnectIntervalSeconds);
+                _reconnectTimer = new Timer(CheckConnection, null, interval, interval);
             }
         }
 
