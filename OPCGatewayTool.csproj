@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="MaterialDesignThemes" Version="4.9.0" />
     <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua" Version="1.5.376.244" />
     <PackageReference Include="TitaniumAS.Opc.Client" Version="1.0.2" />
     <PackageReference Include="Microsoft.Toolkit.Mvvm" Version="7.1.2" />

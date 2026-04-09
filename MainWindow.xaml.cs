@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using OPCGatewayTool.ViewModels;
 using OPCGatewayTool.Models;
+using MaterialDesignThemes.Wpf;
 using NLog;
 
 namespace OPCGatewayTool
@@ -19,7 +20,9 @@ namespace OPCGatewayTool
                 InitializeComponent();
                 _viewModel = new MainViewModel();
                 DataContext = _viewModel;
-                
+
+                StateChanged += MainWindow_StateChanged;
+
                 logger.Info("主窗口初始化完成");
             }
             catch (Exception ex)
@@ -28,6 +31,37 @@ namespace OPCGatewayTool
                 MessageBox.Show($"初始化失敗: {ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        #region Window Chrome Controls
+
+        private void MinimizeButton_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        private void MaximizeButton_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState == WindowState.Maximized
+                ? WindowState.Normal
+                : WindowState.Maximized;
+        }
+
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        private void MainWindow_StateChanged(object sender, EventArgs e)
+        {
+            if (MaximizeIcon != null)
+            {
+                MaximizeIcon.Kind = WindowState == WindowState.Maximized
+                    ? PackIconKind.WindowRestore
+                    : PackIconKind.WindowMaximize;
+            }
+        }
+
+        #endregion
 
         protected override void OnClosed(EventArgs e)
         {

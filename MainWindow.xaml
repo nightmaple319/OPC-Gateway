@@ -3,345 +3,747 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
-        Title="OPC DA to OPC UA Gateway" Height="800" Width="1200"
-        WindowStartupLocation="CenterScreen">
-    
+        Title="OPC DA to OPC UA Gateway"
+        Height="860" Width="1280"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="{DynamicResource MaterialDesignFont}"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        TextElement.FontSize="13"
+        Closing="Window_Closing">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="44"
+                      ResizeBorderThickness="6"
+                      GlassFrameThickness="0"
+                      CornerRadius="0"
+                      UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
+
     <Window.Resources>
-        <!-- 轉換器 -->
         <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-        
-        <!-- 樣式 -->
-        <Style x:Key="StatusIndicatorStyle" TargetType="Ellipse">
-            <Setter Property="Width" Value="12"/>
-            <Setter Property="Height" Value="12"/>
-            <Setter Property="Margin" Value="5,0"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding}" Value="True">
-                    <Setter Property="Fill" Value="Green"/>
-                </DataTrigger>
-                <DataTrigger Binding="{Binding}" Value="False">
-                    <Setter Property="Fill" Value="Red"/>
-                </DataTrigger>
-            </Style.Triggers>
+
+        <!-- 視窗控制按鈕樣式 -->
+        <Style x:Key="WindowControlButton" TargetType="Button">
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#30FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#50FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
-        
-        <Style x:Key="StatusTextStyle" TargetType="TextBlock">
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Margin" Value="2,0"/>
-        </Style>
-        
-        <Style x:Key="GroupBoxStyle" TargetType="GroupBox">
-            <Setter Property="Margin" Value="2"/>
-            <Setter Property="Padding" Value="5"/>
+
+        <Style x:Key="WindowCloseButton" TargetType="Button" BasedOn="{StaticResource WindowControlButton}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#E81123"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#B2101D"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="150"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <materialDesign:DialogHost>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-        <!-- 工具欄 -->
-        <ToolBar Grid.Row="0" Height="35">
-            <Button Content="連接 OPC DA" Command="{Binding ConnectOPCDACommand}" Width="100" Margin="2"/>
-            <Button Content="斷開 OPC DA" Command="{Binding DisconnectOPCDACommand}" Width="100" Margin="2"/>
-            <Separator/>
-            <Button Content="啟動 OPC UA" Command="{Binding StartOPCUACommand}" Width="100" Margin="2"/>
-            <Button Content="停止 OPC UA" Command="{Binding StopOPCUACommand}" Width="100" Margin="2"/>
-            <Separator/>
-            <Button Content="載入配置" Command="{Binding LoadConfigCommand}" Width="80" Margin="2"/>
-            <Button Content="保存配置" Command="{Binding SaveConfigCommand}" Width="80" Margin="2"/>
-            <Separator/>
-            <Button Content="清除日誌" Command="{Binding ClearLogCommand}" Width="80" Margin="2"/>
-        </ToolBar>
+            <!-- ==================== 頂部標題列 + 工具列 ==================== -->
+            <materialDesign:ColorZone Mode="PrimaryMid" Grid.Row="0"
+                                      materialDesign:ElevationAssist.Elevation="Dp2">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="44"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-        <!-- 主要內容區域 -->
-        <Grid Grid.Row="1" Margin="5">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="5"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="5"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+                    <!-- 標題列（可拖曳區域） -->
+                    <Grid Grid.Row="0">
+                        <!-- 左側：圖示 + 標題 -->
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                            <materialDesign:PackIcon Kind="SwapHorizontal" Width="22" Height="22"
+                                                      VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBlock Text="OPC Gateway" FontSize="15" FontWeight="Medium"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
 
-            <!-- 左欄：OPC DA 配置和項目瀏覽 -->
-            <Grid Grid.Column="0">
+                        <!-- 右側：視窗控制按鈕 -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                            <Button Style="{StaticResource WindowControlButton}" Click="MinimizeButton_Click"
+                                    ToolTip="最小化">
+                                <materialDesign:PackIcon Kind="WindowMinimize" Width="16" Height="16"/>
+                            </Button>
+                            <Button Style="{StaticResource WindowControlButton}" Click="MaximizeButton_Click"
+                                    ToolTip="最大化" x:Name="MaximizeButton">
+                                <materialDesign:PackIcon Kind="WindowMaximize" Width="16" Height="16"
+                                                          x:Name="MaximizeIcon"/>
+                            </Button>
+                            <Button Style="{StaticResource WindowCloseButton}" Click="CloseButton_Click"
+                                    ToolTip="關閉">
+                                <materialDesign:PackIcon Kind="WindowClose" Width="16" Height="16"/>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- 工具列按鈕 -->
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="12,0,12,8"
+                                WindowChrome.IsHitTestVisibleInChrome="True">
+                        <!-- OPC DA 控制 -->
+                        <Button Command="{Binding ConnectOPCDACommand}"
+                                Style="{StaticResource MaterialDesignFlatMidBgButton}"
+                                Foreground="White" Margin="0,0,4,0" Height="30" FontSize="12"
+                                ToolTip="連接 OPC DA 伺服器">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="LanConnect" Width="16" Height="16"
+                                                          VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock Text="連接 DA"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding DisconnectOPCDACommand}"
+                                Style="{StaticResource MaterialDesignFlatMidBgButton}"
+                                Foreground="White" Margin="0,0,4,0" Height="30" FontSize="12"
+                                ToolTip="斷開 OPC DA 連接">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="LanDisconnect" Width="16" Height="16"
+                                                          VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock Text="斷開 DA"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Border Width="1" Background="#30FFFFFF" Margin="8,4"/>
+
+                        <!-- OPC UA 控制 -->
+                        <Button Command="{Binding StartOPCUACommand}"
+                                Style="{StaticResource MaterialDesignFlatMidBgButton}"
+                                Foreground="White" Margin="0,0,4,0" Height="30" FontSize="12"
+                                ToolTip="啟動 OPC UA 伺服器">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Play" Width="16" Height="16"
+                                                          VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock Text="啟動 UA"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding StopOPCUACommand}"
+                                Style="{StaticResource MaterialDesignFlatMidBgButton}"
+                                Foreground="White" Margin="0,0,4,0" Height="30" FontSize="12"
+                                ToolTip="停止 OPC UA 伺服器">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Stop" Width="16" Height="16"
+                                                          VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock Text="停止 UA"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Border Width="1" Background="#30FFFFFF" Margin="8,4"/>
+
+                        <!-- 配置 -->
+                        <Button Command="{Binding LoadConfigCommand}"
+                                Style="{StaticResource MaterialDesignFlatMidBgButton}"
+                                Foreground="White" Margin="0,0,4,0" Height="30"
+                                ToolTip="載入配置檔">
+                            <materialDesign:PackIcon Kind="FolderOpen" Width="16" Height="16"/>
+                        </Button>
+                        <Button Command="{Binding SaveConfigCommand}"
+                                Style="{StaticResource MaterialDesignFlatMidBgButton}"
+                                Foreground="White" Margin="0,0,4,0" Height="30"
+                                ToolTip="儲存配置檔">
+                            <materialDesign:PackIcon Kind="ContentSave" Width="16" Height="16"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </materialDesign:ColorZone>
+
+            <!-- ==================== 主要內容區域 ==================== -->
+            <Grid Grid.Row="1" Margin="8">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="5"/>
-                    <RowDefinition Height="2*"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="8"/>
+                    <RowDefinition Height="180"/>
                 </Grid.RowDefinitions>
 
-                <!-- OPC DA 配置 -->
-                <GroupBox Header="OPC DA 配置" Grid.Row="0" Style="{StaticResource GroupBoxStyle}">
-                    <StackPanel>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="80"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
+                <!-- 上方三欄 -->
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" MinWidth="280"/>
+                        <ColumnDefinition Width="8"/>
+                        <ColumnDefinition Width="1.2*" MinWidth="320"/>
+                        <ColumnDefinition Width="8"/>
+                        <ColumnDefinition Width="*" MinWidth="280"/>
+                    </Grid.ColumnDefinitions>
 
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="伺服器名:" VerticalAlignment="Center" Margin="0,2"/>
-                            <ComboBox Grid.Row="0" Grid.Column="1" 
-                                      ItemsSource="{Binding AvailableOPCDAServers}"
-                                      SelectedItem="{Binding OPCDAConfig.ServerName}"
-                                      Text="{Binding OPCDAConfig.ServerName, UpdateSourceTrigger=PropertyChanged}"
-                                      IsEditable="True" Margin="2"/>
-                            <Button Grid.Row="0" Grid.Column="2" Content="掃描" 
-                                    Command="{Binding ScanOPCDAServersCommand}" Width="60" Margin="2"/>
+                    <!-- ===== 左欄：OPC DA ===== -->
+                    <Grid Grid.Column="0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="主機名:" VerticalAlignment="Center" Margin="0,2"/>
-                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding OPCDAConfig.HostName}" Margin="2"/>
+                        <!-- OPC DA 配置卡片 -->
+                        <materialDesign:Card Grid.Row="0" Padding="12"
+                                             materialDesign:ElevationAssist.Elevation="Dp1">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <materialDesign:PackIcon Kind="ServerNetwork"
+                                                              Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                              Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="OPC DA 配置" FontSize="15" FontWeight="Medium"
+                                               VerticalAlignment="Center"/>
+                                    <!-- 狀態指示 -->
+                                    <Border CornerRadius="8" Padding="8,2" Margin="12,0,0,0"
+                                            VerticalAlignment="Center"
+                                            Background="{Binding IsOPCDAConnected, Converter={StaticResource BoolToVisConverter}, FallbackValue=Collapsed}">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#FFEBEE"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsOPCDAConnected}" Value="True">
+                                                        <Setter Property="Background" Value="#E8F5E9"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock VerticalAlignment="Center" FontSize="11">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="&#x25CF; 未連接"/>
+                                                    <Setter Property="Foreground" Value="#D32F2F"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsOPCDAConnected}" Value="True">
+                                                            <Setter Property="Text" Value="&#x25CF; 已連接"/>
+                                                            <Setter Property="Foreground" Value="#388E3C"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Border>
+                                </StackPanel>
 
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="更新頻率:" VerticalAlignment="Center" Margin="0,2"/>
-                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding OPCDAConfig.UpdateRate}" Margin="2"/>
-                            <TextBlock Grid.Row="2" Grid.Column="2" Text="ms" VerticalAlignment="Center" Margin="2"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
 
-                            <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0,5">
-                                <Ellipse Style="{StaticResource StatusIndicatorStyle}" DataContext="{Binding IsOPCDAConnected}"/>
-                                <TextBlock Text="{Binding OPCDAConnectionStatus}" Style="{StaticResource StatusTextStyle}"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="伺服器:" VerticalAlignment="Center"
+                                               Opacity="0.7" Margin="0,4"/>
+                                    <ComboBox Grid.Row="0" Grid.Column="1"
+                                              ItemsSource="{Binding AvailableOPCDAServers}"
+                                              SelectedItem="{Binding OPCDAConfig.ServerName}"
+                                              Text="{Binding OPCDAConfig.ServerName, UpdateSourceTrigger=PropertyChanged}"
+                                              IsEditable="True" Margin="4"
+                                              materialDesign:HintAssist.Hint="選擇或輸入伺服器名稱"
+                                              Style="{StaticResource MaterialDesignComboBox}"/>
+                                    <Button Grid.Row="0" Grid.Column="2"
+                                            Command="{Binding ScanOPCDAServersCommand}"
+                                            Style="{StaticResource MaterialDesignIconButton}"
+                                            ToolTip="掃描 OPC DA 伺服器" Margin="2">
+                                        <materialDesign:PackIcon Kind="Refresh"/>
+                                    </Button>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="主機:" VerticalAlignment="Center"
+                                               Opacity="0.7" Margin="0,4"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                                             Text="{Binding OPCDAConfig.HostName}" Margin="4"
+                                             materialDesign:HintAssist.Hint="主機名稱"
+                                             Style="{StaticResource MaterialDesignTextBox}"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="更新頻率:" VerticalAlignment="Center"
+                                               Opacity="0.7" Margin="0,4"/>
+                                    <StackPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                                                Orientation="Horizontal">
+                                        <TextBox Text="{Binding OPCDAConfig.UpdateRate}" Width="80" Margin="4"
+                                                 materialDesign:HintAssist.Hint="毫秒"
+                                                 Style="{StaticResource MaterialDesignTextBox}"/>
+                                        <TextBlock Text="ms" VerticalAlignment="Center" Opacity="0.5" Margin="4,0"/>
+                                    </StackPanel>
+                                </Grid>
                             </StackPanel>
-                        </Grid>
-                    </StackPanel>
-                </GroupBox>
+                        </materialDesign:Card>
 
-                <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch"/>
+                        <!-- OPC DA 項目瀏覽卡片 -->
+                        <materialDesign:Card Grid.Row="2" Padding="12"
+                                             materialDesign:ElevationAssist.Elevation="Dp1">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
 
-                <!-- OPC DA 項目瀏覽 -->
-                <GroupBox Header="OPC DA 項目瀏覽" Grid.Row="2" Style="{StaticResource GroupBoxStyle}">
+                                <!-- 標題列 -->
+                                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                                    <materialDesign:PackIcon Kind="FileTree"
+                                                              Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                              Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="項目瀏覽" FontSize="15" FontWeight="Medium"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- 操作按鈕 -->
+                                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6">
+                                    <Button Command="{Binding BrowseOPCDAItemsCommand}"
+                                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                                            Height="28" FontSize="12" Padding="10,0" Margin="0,0,6,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="FolderSearch" Width="16" Height="16"
+                                                                      VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                            <TextBlock Text="瀏覽"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Command="{Binding AddSelectedItemsCommand}"
+                                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                                            Height="28" FontSize="12" Padding="10,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="PlaylistPlus" Width="16" Height="16"
+                                                                      VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                            <TextBlock Text="添加選中"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+
+                                <!-- 搜尋列 -->
+                                <Grid Grid.Row="2" Margin="0,0,0,6">
+                                    <TextBox Text="{Binding SearchTerm, UpdateSourceTrigger=PropertyChanged}"
+                                             materialDesign:HintAssist.Hint="搜尋項目..."
+                                             materialDesign:TextFieldAssist.HasLeadingIcon="True"
+                                             materialDesign:TextFieldAssist.LeadingIcon="Magnify"
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                             FontSize="12" Padding="4"
+                                             Margin="0,0,70,0"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                                                VerticalAlignment="Center">
+                                        <Button Command="{Binding SearchItemsCommand}"
+                                                Style="{StaticResource MaterialDesignIconButton}"
+                                                Width="30" Height="30" ToolTip="搜尋">
+                                            <materialDesign:PackIcon Kind="Magnify" Width="18" Height="18"/>
+                                        </Button>
+                                        <Button Command="{Binding ClearSearchCommand}"
+                                                Style="{StaticResource MaterialDesignIconButton}"
+                                                Width="30" Height="30" ToolTip="清除搜尋">
+                                            <materialDesign:PackIcon Kind="Close" Width="18" Height="18"/>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- 樹狀項目 -->
+                                <TreeView Grid.Row="3" ItemsSource="{Binding OPCTreeNodes}" x:Name="OPCTreeView"
+                                          BorderThickness="0">
+                                    <TreeView.ItemTemplate>
+                                        <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                            <StackPanel Orientation="Horizontal" Margin="0,1">
+                                                <CheckBox IsChecked="{Binding IsSelected}" Margin="0,0,4,0"
+                                                          Visibility="{Binding IsItem, Converter={StaticResource BoolToVisConverter}}"/>
+                                                <materialDesign:PackIcon Margin="0,0,4,0" Width="16" Height="16"
+                                                                          VerticalAlignment="Center">
+                                                    <materialDesign:PackIcon.Style>
+                                                        <Style TargetType="materialDesign:PackIcon">
+                                                            <Setter Property="Kind" Value="Tag"/>
+                                                            <Setter Property="Foreground" Value="{DynamicResource PrimaryHueMidBrush}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsFolder}" Value="True">
+                                                                    <Setter Property="Kind" Value="Folder"/>
+                                                                    <Setter Property="Foreground" Value="#FFA000"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </materialDesign:PackIcon.Style>
+                                                </materialDesign:PackIcon>
+                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                                           ToolTip="{Binding FullPath}" FontSize="12"/>
+                                            </StackPanel>
+                                        </HierarchicalDataTemplate>
+                                    </TreeView.ItemTemplate>
+                                    <TreeView.ItemContainerStyle>
+                                        <Style TargetType="TreeViewItem" BasedOn="{StaticResource MaterialDesignTreeViewItem}">
+                                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                                            <EventSetter Event="Expanded" Handler="TreeViewItem_Expanded"/>
+                                        </Style>
+                                    </TreeView.ItemContainerStyle>
+                                </TreeView>
+                            </Grid>
+                        </materialDesign:Card>
+                    </Grid>
+
+                    <!-- ===== 中欄：數據映射 + 即時數據 ===== -->
+                    <Grid Grid.Column="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- 數據映射卡片 -->
+                        <materialDesign:Card Grid.Row="0" Padding="12"
+                                             materialDesign:ElevationAssist.Elevation="Dp1">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                                        <materialDesign:PackIcon Kind="LinkVariant"
+                                                                  Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                                  Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Text="數據映射" FontSize="15" FontWeight="Medium"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
+                                        <ToggleButton IsChecked="{Binding IsMappingEnabled}"
+                                                      Style="{StaticResource MaterialDesignSwitchToggleButton}"
+                                                      ToolTip="啟用/停用映射" Margin="0,0,8,0"/>
+                                        <Button Command="{Binding ClearMappingsCommand}"
+                                                Style="{StaticResource MaterialDesignIconButton}"
+                                                Width="30" Height="30" ToolTip="清除所有映射">
+                                            <materialDesign:PackIcon Kind="DeleteSweep" Width="18" Height="18"/>
+                                        </Button>
+                                    </StackPanel>
+                                </DockPanel>
+
+                                <DataGrid Grid.Row="1" ItemsSource="{Binding ItemMappings}"
+                                          AutoGenerateColumns="False" CanUserAddRows="False"
+                                          HeadersVisibility="Column" IsReadOnly="False"
+                                          materialDesign:DataGridAssist.CellPadding="8 4"
+                                          materialDesign:DataGridAssist.ColumnHeaderPadding="8 4"
+                                          BorderThickness="0"
+                                          SelectionUnit="FullRow">
+                                    <DataGrid.Columns>
+                                        <DataGridCheckBoxColumn Header="" Binding="{Binding IsEnabled, UpdateSourceTrigger=PropertyChanged}"
+                                                                Width="40"
+                                                                ElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnStyle}"
+                                                                EditingElementStyle="{StaticResource MaterialDesignDataGridCheckBoxColumnEditingStyle}"/>
+                                        <DataGridTextColumn Header="OPC DA 項目" Binding="{Binding OPCDAItemId}" Width="*"
+                                                            IsReadOnly="True"/>
+                                        <DataGridTextColumn Header="OPC UA 節點" Binding="{Binding OPCUABrowseName}" Width="*"
+                                                            IsReadOnly="True"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </materialDesign:Card>
+
+                        <!-- 即時數據卡片 -->
+                        <materialDesign:Card Grid.Row="2" Padding="12"
+                                             materialDesign:ElevationAssist.Elevation="Dp1">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                                    <materialDesign:PackIcon Kind="ChartTimelineVariant"
+                                                              Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                              Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="即時數據" FontSize="15" FontWeight="Medium"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <DataGrid Grid.Row="1" ItemsSource="{Binding RealTimeData}"
+                                          AutoGenerateColumns="False" IsReadOnly="True"
+                                          CanUserAddRows="False"
+                                          HeadersVisibility="Column"
+                                          materialDesign:DataGridAssist.CellPadding="8 4"
+                                          materialDesign:DataGridAssist.ColumnHeaderPadding="8 4"
+                                          BorderThickness="0"
+                                          SelectionUnit="FullRow">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="項目 ID" Binding="{Binding ItemId}" Width="*"/>
+                                        <DataGridTextColumn Header="值" Binding="{Binding ValueString}" Width="100"/>
+                                        <DataGridTextColumn Header="品質" Binding="{Binding QualityString}" Width="80"/>
+                                        <DataGridTextColumn Header="時間戳" Binding="{Binding TimestampString}" Width="150"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </materialDesign:Card>
+                    </Grid>
+
+                    <!-- ===== 右欄：OPC UA ===== -->
+                    <Grid Grid.Column="4">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- OPC UA 配置卡片 -->
+                        <materialDesign:Card Grid.Row="0" Padding="12"
+                                             materialDesign:ElevationAssist.Elevation="Dp1">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <materialDesign:PackIcon Kind="Server"
+                                                              Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                              Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="OPC UA 配置" FontSize="15" FontWeight="Medium"
+                                               VerticalAlignment="Center"/>
+                                    <!-- 狀態指示 -->
+                                    <Border CornerRadius="8" Padding="8,2" Margin="12,0,0,0"
+                                            VerticalAlignment="Center">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#FFEBEE"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsOPCUARunning}" Value="True">
+                                                        <Setter Property="Background" Value="#E8F5E9"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock VerticalAlignment="Center" FontSize="11">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="&#x25CF; 已停止"/>
+                                                    <Setter Property="Foreground" Value="#D32F2F"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsOPCUARunning}" Value="True">
+                                                            <Setter Property="Text" Value="&#x25CF; 運行中"/>
+                                                            <Setter Property="Foreground" Value="#388E3C"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Border>
+                                </StackPanel>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="75"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="伺服器名:" VerticalAlignment="Center"
+                                               Opacity="0.7" Margin="0,4"/>
+                                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding OPCUAConfig.ServerName}" Margin="4"
+                                             Style="{StaticResource MaterialDesignTextBox}"/>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="端口:" VerticalAlignment="Center"
+                                               Opacity="0.7" Margin="0,4"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding OPCUAConfig.Port}" Margin="4"
+                                             Style="{StaticResource MaterialDesignTextBox}"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="應用名稱:" VerticalAlignment="Center"
+                                               Opacity="0.7" Margin="0,4"/>
+                                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding OPCUAConfig.ApplicationName}" Margin="4"
+                                             Style="{StaticResource MaterialDesignTextBox}"/>
+
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="最大客戶端:" VerticalAlignment="Center"
+                                               Opacity="0.7" Margin="0,4"/>
+                                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding OPCUAConfig.MaxClients}" Margin="4"
+                                             Style="{StaticResource MaterialDesignTextBox}"/>
+
+                                    <CheckBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
+                                              Content="啟用安全模式" IsChecked="{Binding OPCUAConfig.EnableSecurity}" Margin="0,6"/>
+
+                                    <!-- 端點URL顯示 -->
+                                    <Border Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2"
+                                            CornerRadius="4" Background="#F5F5F5" Padding="8,6" Margin="0,6,0,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="Link" Width="14" Height="14"
+                                                                      VerticalAlignment="Center" Opacity="0.5" Margin="0,0,6,0"/>
+                                            <TextBlock Text="{Binding OPCUAEndpointUrl}" FontSize="11"
+                                                       FontFamily="Consolas" VerticalAlignment="Center" Opacity="0.8"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+                        </materialDesign:Card>
+
+                        <!-- 客戶端狀態卡片 -->
+                        <materialDesign:Card Grid.Row="2" Padding="12"
+                                             materialDesign:ElevationAssist.Elevation="Dp1">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                                        <materialDesign:PackIcon Kind="AccountMultiple"
+                                                                  Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                                  Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Text="已連接客戶端" FontSize="15" FontWeight="Medium"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <!-- 連接數 Badge -->
+                                    <materialDesign:Badged DockPanel.Dock="Right" HorizontalAlignment="Right"
+                                                           Badge="{Binding ConnectedClientCount}"
+                                                           BadgeColorZoneMode="PrimaryMid">
+                                        <materialDesign:PackIcon Kind="AccountGroup" Width="20" Height="20"
+                                                                  Opacity="0.5"/>
+                                    </materialDesign:Badged>
+                                </DockPanel>
+
+                                <ListBox Grid.Row="1" ItemsSource="{Binding ConnectedClients}"
+                                         BorderThickness="0">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="0,4">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <materialDesign:PackIcon Kind="Account" Width="16" Height="16"
+                                                                              VerticalAlignment="Center" Margin="0,0,6,0"
+                                                                              Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                                    <TextBlock Text="{Binding ClientName}" FontWeight="Medium"/>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding EndpointUrl}" FontSize="11" Opacity="0.6" Margin="22,0,0,0"/>
+                                                <TextBlock FontSize="11" Opacity="0.6" Margin="22,0,0,0"
+                                                           Text="{Binding ConnectedTime, StringFormat='連接時間: {0:yyyy-MM-dd HH:mm:ss}'}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </materialDesign:Card>
+                    </Grid>
+                </Grid>
+
+                <!-- ===== 下方：日誌區域 ===== -->
+                <materialDesign:Card Grid.Row="2" Padding="12"
+                                     materialDesign:ElevationAssist.Elevation="Dp1">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        
-                        <!-- 操作按鈕 -->
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,5">
-                            <Button Content="瀏覽項目" Command="{Binding BrowseOPCDAItemsCommand}" Width="80" Margin="2"/>
-                            <Button Content="添加選中" Command="{Binding AddSelectedItemsCommand}" Width="80" Margin="2"/>
-                        </StackPanel>
 
-                        <!-- 搜尋功能 -->
-                        <Grid Grid.Row="1" Margin="0,0,0,5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="0" x:Name="SearchTextBox" 
-                                     Text="{Binding SearchTerm, UpdateSourceTrigger=PropertyChanged}" 
-                                     ToolTip="輸入搜尋關鍵字..." Margin="2"/>
-                            <Button Grid.Column="1" Content="搜尋" 
-                                    Command="{Binding SearchItemsCommand}" Width="60" Margin="2"/>
-                            <Button Grid.Column="2" Content="清除" 
-                                    Command="{Binding ClearSearchCommand}" Width="60" Margin="2"/>
-                        </Grid>
+                        <DockPanel Grid.Row="0" Margin="0,0,0,6">
+                            <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                                <materialDesign:PackIcon Kind="Console"
+                                                          Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                          Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="系統日誌" FontSize="15" FontWeight="Medium"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Button Command="{Binding ClearLogCommand}"
+                                    DockPanel.Dock="Right" HorizontalAlignment="Right"
+                                    Style="{StaticResource MaterialDesignIconButton}"
+                                    Width="30" Height="30" ToolTip="清除日誌">
+                                <materialDesign:PackIcon Kind="DeleteSweep" Width="18" Height="18"/>
+                            </Button>
+                        </DockPanel>
 
-                        <!-- 樹狀項目瀏覽 -->
-                        <TreeView Grid.Row="2" ItemsSource="{Binding OPCTreeNodes}" Margin="2" x:Name="OPCTreeView">
-                            <TreeView.ItemTemplate>
-                                <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <CheckBox IsChecked="{Binding IsSelected}" Margin="2" 
-                                                  Visibility="{Binding IsItem, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                        <TextBlock Text="📁" Margin="2" 
-                                                   Visibility="{Binding IsFolder, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                        <TextBlock Text="📄" Margin="2" 
-                                                   Visibility="{Binding IsItem, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                        <TextBlock Text="{Binding Name}" Margin="2" ToolTip="{Binding FullPath}"/>
-                                    </StackPanel>
-                                </HierarchicalDataTemplate>
-                            </TreeView.ItemTemplate>
-                            <TreeView.ItemContainerStyle>
-                                <Style TargetType="TreeViewItem">
-                                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
-                                    <EventSetter Event="Expanded" Handler="TreeViewItem_Expanded"/>
+                        <TextBox Grid.Row="1"
+                                 Text="{Binding LogMessages, Mode=OneWay}"
+                                 IsReadOnly="True" TextWrapping="Wrap"
+                                 VerticalScrollBarVisibility="Auto"
+                                 FontFamily="Consolas" FontSize="11"
+                                 BorderThickness="0"
+                                 Background="#FAFAFA"
+                                 Padding="8"
+                                 AcceptsReturn="True"/>
+                    </Grid>
+                </materialDesign:Card>
+            </Grid>
+
+            <!-- ==================== 底部狀態列 ==================== -->
+            <materialDesign:ColorZone Grid.Row="2" Mode="PrimaryLight" Padding="8,4"
+                                      materialDesign:ElevationAssist.Elevation="Dp2">
+                <DockPanel>
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                        <!-- OPC DA 狀態 -->
+                        <materialDesign:PackIcon Kind="CircleSmall" Width="18" Height="18" VerticalAlignment="Center">
+                            <materialDesign:PackIcon.Style>
+                                <Style TargetType="materialDesign:PackIcon">
+                                    <Setter Property="Foreground" Value="#F44336"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsOPCDAConnected}" Value="True">
+                                            <Setter Property="Foreground" Value="#4CAF50"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
                                 </Style>
-                            </TreeView.ItemContainerStyle>
-                        </TreeView>
-                    </Grid>
-                </GroupBox>
-            </Grid>
+                            </materialDesign:PackIcon.Style>
+                        </materialDesign:PackIcon>
+                        <TextBlock Text="OPC DA" VerticalAlignment="Center" FontSize="12" Margin="0,0,4,0"/>
+                        <TextBlock Text="{Binding OPCDAItemCount, StringFormat='({0} 項目)'}"
+                                   VerticalAlignment="Center" FontSize="11" Opacity="0.8"/>
 
-            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch"/>
+                        <Border Width="1" Background="#40000000" Margin="12,2"/>
 
-            <!-- 中欄：數據映射和即時數據 -->
-            <Grid Grid.Column="2">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="5"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+                        <!-- OPC UA 狀態 -->
+                        <materialDesign:PackIcon Kind="CircleSmall" Width="18" Height="18" VerticalAlignment="Center">
+                            <materialDesign:PackIcon.Style>
+                                <Style TargetType="materialDesign:PackIcon">
+                                    <Setter Property="Foreground" Value="#F44336"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsOPCUARunning}" Value="True">
+                                            <Setter Property="Foreground" Value="#4CAF50"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </materialDesign:PackIcon.Style>
+                        </materialDesign:PackIcon>
+                        <TextBlock Text="OPC UA" VerticalAlignment="Center" FontSize="12" Margin="0,0,4,0"/>
+                        <TextBlock Text="{Binding OPCUANodeCount, StringFormat='({0} 節點)'}"
+                                   VerticalAlignment="Center" FontSize="11" Opacity="0.8"/>
 
-                <!-- 數據映射區域 -->
-                <GroupBox Header="數據映射" Grid.Row="0" Style="{StaticResource GroupBoxStyle}">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,5">
-                            <CheckBox Content="啟用映射" IsChecked="{Binding IsMappingEnabled}" Margin="2"/>
-                            <Button Content="清除映射" Command="{Binding ClearMappingsCommand}" Width="80" Margin="2"/>
-                        </StackPanel>
+                        <Border Width="1" Background="#40000000" Margin="12,2"/>
 
-                        <DataGrid Grid.Row="1" ItemsSource="{Binding ItemMappings}" AutoGenerateColumns="False" 
-                                  CanUserAddRows="False" Margin="2">
-                            <DataGrid.Columns>
-                                <DataGridCheckBoxColumn Header="啟用" Binding="{Binding IsEnabled}" Width="50"/>
-                                <DataGridTextColumn Header="OPC DA 項目" Binding="{Binding OPCDAItemId}" Width="*"/>
-                                <DataGridTextColumn Header="OPC UA 節點" Binding="{Binding OPCUABrowseName}" Width="*"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </Grid>
-                </GroupBox>
-
-                <GridSplitter Grid.Row="1" HorizontalAlignment="Stretch"/>
-
-                <!-- 即時數據顯示 -->
-                <GroupBox Header="即時數據" Grid.Row="2" Style="{StaticResource GroupBoxStyle}">
-                    <DataGrid ItemsSource="{Binding RealTimeData}" AutoGenerateColumns="False" 
-                              IsReadOnly="True" Margin="2">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="項目ID" Binding="{Binding ItemId}" Width="*"/>
-                            <DataGridTextColumn Header="值" Binding="{Binding ValueString}" Width="100"/>
-                            <DataGridTextColumn Header="品質" Binding="{Binding QualityString}" Width="80"/>
-                            <DataGridTextColumn Header="時間戳" Binding="{Binding TimestampString}" Width="150"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </GroupBox>
-            </Grid>
-
-            <GridSplitter Grid.Column="3" HorizontalAlignment="Stretch"/>
-
-            <!-- 右欄：OPC UA 配置和客戶端狀態 -->
-            <Grid Grid.Column="4">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <!-- OPC UA 配置 -->
-                <GroupBox Header="OPC UA 配置" Grid.Row="0" Style="{StaticResource GroupBoxStyle}">
-                    <StackPanel>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="80"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="伺服器名:" VerticalAlignment="Center" Margin="0,2"/>
-                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding OPCUAConfig.ServerName}" Margin="2"/>
-
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="端口:" VerticalAlignment="Center" Margin="0,2"/>
-                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding OPCUAConfig.Port}" Margin="2"/>
-
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="應用名稱:" VerticalAlignment="Center" Margin="0,2"/>
-                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding OPCUAConfig.ApplicationName}" Margin="2"/>
-
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="最大客戶端:" VerticalAlignment="Center" Margin="0,2"/>
-                            <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding OPCUAConfig.MaxClients}" Margin="2"/>
-
-                            <CheckBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" 
-                                      Content="啟用安全" IsChecked="{Binding OPCUAConfig.EnableSecurity}" Margin="2"/>
-
-                            <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,5">
-                                <Ellipse Style="{StaticResource StatusIndicatorStyle}" DataContext="{Binding IsOPCUARunning}"/>
-                                <TextBlock Text="{Binding OPCUAServerStatus}" Style="{StaticResource StatusTextStyle}"/>
-                            </StackPanel>
-                        </Grid>
+                        <!-- 映射數 -->
+                        <materialDesign:PackIcon Kind="LinkVariant" Width="14" Height="14"
+                                                  VerticalAlignment="Center" Margin="0,0,4,0" Opacity="0.7"/>
+                        <TextBlock Text="{Binding ActiveMappingCount, StringFormat='映射: {0}'}"
+                                   VerticalAlignment="Center" FontSize="12"/>
                     </StackPanel>
-                </GroupBox>
 
-                <!-- OPC UA 客戶端狀態 -->
-                <GroupBox Header="客戶端狀態" Grid.Row="1" Style="{StaticResource GroupBoxStyle}">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,5">
-                            <TextBlock Text="連接數:" Margin="2"/>
-                            <TextBlock Text="{Binding ConnectedClientCount}" FontWeight="Bold" Margin="2"/>
-                            <TextBlock Text="端點URL:" Margin="10,2,2,2"/>
-                            <TextBlock Text="{Binding OPCUAEndpointUrl}" FontStyle="Italic" Margin="2"/>
-                        </StackPanel>
-
-                        <ListBox Grid.Row="1" ItemsSource="{Binding ConnectedClients}" Margin="2">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding ClientName}" FontWeight="Bold"/>
-                                        <TextBlock Text="{Binding EndpointUrl}" FontSize="10" Foreground="Gray"/>
-                                        <TextBlock Text="{Binding ConnectedTime, StringFormat='連接時間: {0:yyyy-MM-dd HH:mm:ss}'}" 
-                                                   FontSize="10" Foreground="Gray"/>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </Grid>
-                </GroupBox>
-            </Grid>
+                    <!-- 右側時間 -->
+                    <TextBlock DockPanel.Dock="Right" HorizontalAlignment="Right"
+                               Text="{Binding CurrentTime, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}"
+                               VerticalAlignment="Center" FontSize="12" Opacity="0.8"/>
+                </DockPanel>
+            </materialDesign:ColorZone>
         </Grid>
-
-        <!-- 日誌區域 -->
-        <GroupBox Header="系統日誌" Grid.Row="2" Style="{StaticResource GroupBoxStyle}">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                <TextBox Text="{Binding LogMessages}" IsReadOnly="True" 
-                         TextWrapping="Wrap" FontFamily="Consolas" FontSize="10"
-                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
-            </ScrollViewer>
-        </GroupBox>
-
-        <!-- 狀態欄 -->
-        <StatusBar Grid.Row="3" Height="25">
-            <StatusBarItem>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="OPC DA:"/>
-                    <Ellipse Style="{StaticResource StatusIndicatorStyle}" DataContext="{Binding IsOPCDAConnected}"/>
-                    <TextBlock Text="{Binding OPCDAItemCount, StringFormat='項目數: {0}'}" Margin="10,0"/>
-                </StackPanel>
-            </StatusBarItem>
-            <Separator/>
-            <StatusBarItem>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="OPC UA:"/>
-                    <Ellipse Style="{StaticResource StatusIndicatorStyle}" DataContext="{Binding IsOPCUARunning}"/>
-                    <TextBlock Text="{Binding OPCUANodeCount, StringFormat='節點數: {0}'}" Margin="10,0"/>
-                </StackPanel>
-            </StatusBarItem>
-            <Separator/>
-            <StatusBarItem>
-                <TextBlock Text="{Binding ActiveMappingCount, StringFormat='映射數: {0}'}" />
-            </StatusBarItem>
-            <Separator/>
-            <StatusBarItem HorizontalContentAlignment="Right">
-                <TextBlock Text="{Binding CurrentTime, StringFormat='時間: {0:yyyy-MM-dd HH:mm:ss}'}"/>
-            </StatusBarItem>
-        </StatusBar>
-    </Grid>
+    </materialDesign:DialogHost>
 </Window>
