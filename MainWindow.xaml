@@ -124,7 +124,7 @@
                     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="12,0,12,8"
                                 WindowChrome.IsHitTestVisibleInChrome="True">
                         <!-- OPC DA 控制 -->
-                        <Button Command="{Binding ConnectOPCDACommand}"
+                        <Button Command="{Binding OPCDA.ConnectCommand}"
                                 Style="{StaticResource MaterialDesignFlatMidBgButton}"
                                 Foreground="White" Margin="0,0,4,0" Height="30" FontSize="12"
                                 ToolTip="連接 OPC DA 伺服器">
@@ -134,7 +134,7 @@
                                 <TextBlock Text="連接 DA"/>
                             </StackPanel>
                         </Button>
-                        <Button Command="{Binding DisconnectOPCDACommand}"
+                        <Button Command="{Binding OPCDA.DisconnectCommand}"
                                 Style="{StaticResource MaterialDesignFlatMidBgButton}"
                                 Foreground="White" Margin="0,0,4,0" Height="30" FontSize="12"
                                 ToolTip="斷開 OPC DA 連接">
@@ -148,7 +148,7 @@
                         <Border Width="1" Background="#30FFFFFF" Margin="8,4"/>
 
                         <!-- OPC UA 控制 -->
-                        <Button Command="{Binding StartOPCUACommand}"
+                        <Button Command="{Binding OPCUA.StartCommand}"
                                 Style="{StaticResource MaterialDesignFlatMidBgButton}"
                                 Foreground="White" Margin="0,0,4,0" Height="30" FontSize="12"
                                 ToolTip="啟動 OPC UA 伺服器">
@@ -158,7 +158,7 @@
                                 <TextBlock Text="啟動 UA"/>
                             </StackPanel>
                         </Button>
-                        <Button Command="{Binding StopOPCUACommand}"
+                        <Button Command="{Binding OPCUA.StopCommand}"
                                 Style="{StaticResource MaterialDesignFlatMidBgButton}"
                                 Foreground="White" Margin="0,0,4,0" Height="30" FontSize="12"
                                 ToolTip="停止 OPC UA 伺服器">
@@ -270,14 +270,14 @@
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="伺服器:" VerticalAlignment="Center"
                                                Opacity="0.7" Margin="0,4"/>
                                     <ComboBox Grid.Row="0" Grid.Column="1"
-                                              ItemsSource="{Binding AvailableOPCDAServers}"
-                                              SelectedItem="{Binding OPCDAConfig.ServerName}"
-                                              Text="{Binding OPCDAConfig.ServerName, UpdateSourceTrigger=PropertyChanged}"
+                                              ItemsSource="{Binding OPCDA.AvailableServers}"
+                                              SelectedItem="{Binding OPCDA.Config.ServerName}"
+                                              Text="{Binding OPCDA.Config.ServerName, UpdateSourceTrigger=PropertyChanged}"
                                               IsEditable="True" Margin="4"
                                               materialDesign:HintAssist.Hint="選擇或輸入伺服器名稱"
                                               Style="{StaticResource MaterialDesignComboBox}"/>
                                     <Button Grid.Row="0" Grid.Column="2"
-                                            Command="{Binding ScanOPCDAServersCommand}"
+                                            Command="{Binding OPCDA.ScanServersCommand}"
                                             Style="{StaticResource MaterialDesignIconButton}"
                                             ToolTip="掃描 OPC DA 伺服器" Margin="2">
                                         <materialDesign:PackIcon Kind="Refresh"/>
@@ -286,7 +286,7 @@
                                     <TextBlock Grid.Row="1" Grid.Column="0" Text="主機:" VerticalAlignment="Center"
                                                Opacity="0.7" Margin="0,4"/>
                                     <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
-                                             Text="{Binding OPCDAConfig.HostName}" Margin="4"
+                                             Text="{Binding OPCDA.Config.HostName}" Margin="4"
                                              materialDesign:HintAssist.Hint="主機名稱"
                                              Style="{StaticResource MaterialDesignTextBox}"/>
 
@@ -294,7 +294,7 @@
                                                Opacity="0.7" Margin="0,4"/>
                                     <StackPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
                                                 Orientation="Horizontal">
-                                        <TextBox Text="{Binding OPCDAConfig.UpdateRate}" Width="80" Margin="4"
+                                        <TextBox Text="{Binding OPCDA.Config.UpdateRate}" Width="80" Margin="4"
                                                  materialDesign:HintAssist.Hint="毫秒"
                                                  Style="{StaticResource MaterialDesignTextBox}"/>
                                         <TextBlock Text="ms" VerticalAlignment="Center" Opacity="0.5" Margin="4,0"/>
@@ -325,7 +325,7 @@
 
                                 <!-- 操作按鈕 -->
                                 <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6">
-                                    <Button Command="{Binding BrowseOPCDAItemsCommand}"
+                                    <Button Command="{Binding OPCDA.BrowseItemsCommand}"
                                             Style="{StaticResource MaterialDesignOutlinedButton}"
                                             Height="28" FontSize="12" Padding="10,0" Margin="0,0,6,0">
                                         <StackPanel Orientation="Horizontal">
@@ -334,7 +334,7 @@
                                             <TextBlock Text="瀏覽"/>
                                         </StackPanel>
                                     </Button>
-                                    <Button Command="{Binding AddSelectedItemsCommand}"
+                                    <Button Command="{Binding Mapping.AddSelectedItemsCommand}"
                                             Style="{StaticResource MaterialDesignOutlinedButton}"
                                             Height="28" FontSize="12" Padding="10,0">
                                         <StackPanel Orientation="Horizontal">
@@ -347,7 +347,7 @@
 
                                 <!-- 搜尋列 -->
                                 <Grid Grid.Row="2" Margin="0,0,0,6">
-                                    <TextBox Text="{Binding SearchTerm, UpdateSourceTrigger=PropertyChanged}"
+                                    <TextBox Text="{Binding OPCDA.SearchTerm, UpdateSourceTrigger=PropertyChanged}"
                                              materialDesign:HintAssist.Hint="搜尋項目..."
                                              materialDesign:TextFieldAssist.HasLeadingIcon="True"
                                              materialDesign:TextFieldAssist.LeadingIcon="Magnify"
@@ -356,12 +356,12 @@
                                              Margin="0,0,70,0"/>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
                                                 VerticalAlignment="Center">
-                                        <Button Command="{Binding SearchItemsCommand}"
+                                        <Button Command="{Binding OPCDA.SearchItemsCommand}"
                                                 Style="{StaticResource MaterialDesignIconButton}"
                                                 Width="30" Height="30" ToolTip="搜尋">
                                             <materialDesign:PackIcon Kind="Magnify" Width="18" Height="18"/>
                                         </Button>
-                                        <Button Command="{Binding ClearSearchCommand}"
+                                        <Button Command="{Binding OPCDA.ClearSearchCommand}"
                                                 Style="{StaticResource MaterialDesignIconButton}"
                                                 Width="30" Height="30" ToolTip="清除搜尋">
                                             <materialDesign:PackIcon Kind="Close" Width="18" Height="18"/>
@@ -370,7 +370,7 @@
                                 </Grid>
 
                                 <!-- 樹狀項目 -->
-                                <TreeView Grid.Row="3" ItemsSource="{Binding OPCTreeNodes}" x:Name="OPCTreeView"
+                                <TreeView Grid.Row="3" ItemsSource="{Binding OPCDA.OPCTreeNodes}" x:Name="OPCTreeView"
                                           BorderThickness="0">
                                     <TreeView.ItemTemplate>
                                         <HierarchicalDataTemplate ItemsSource="{Binding Children}">
@@ -434,10 +434,10 @@
                                                    VerticalAlignment="Center"/>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
-                                        <ToggleButton IsChecked="{Binding IsMappingEnabled}"
+                                        <ToggleButton IsChecked="{Binding Mapping.IsEnabled}"
                                                       Style="{StaticResource MaterialDesignSwitchToggleButton}"
                                                       ToolTip="啟用/停用映射" Margin="0,0,8,0"/>
-                                        <Button Command="{Binding ClearMappingsCommand}"
+                                        <Button Command="{Binding Mapping.ClearCommand}"
                                                 Style="{StaticResource MaterialDesignIconButton}"
                                                 Width="30" Height="30" ToolTip="清除所有映射">
                                             <materialDesign:PackIcon Kind="DeleteSweep" Width="18" Height="18"/>
@@ -445,7 +445,7 @@
                                     </StackPanel>
                                 </DockPanel>
 
-                                <DataGrid Grid.Row="1" ItemsSource="{Binding ItemMappings}"
+                                <DataGrid Grid.Row="1" ItemsSource="{Binding Mapping.ItemMappings}"
                                           AutoGenerateColumns="False" CanUserAddRows="False"
                                           HeadersVisibility="Column" IsReadOnly="False"
                                           materialDesign:DataGridAssist.CellPadding="8 4"
@@ -483,7 +483,7 @@
                                                VerticalAlignment="Center"/>
                                 </StackPanel>
 
-                                <DataGrid Grid.Row="1" ItemsSource="{Binding RealTimeData}"
+                                <DataGrid Grid.Row="1" ItemsSource="{Binding OPCDA.RealTimeData}"
                                           AutoGenerateColumns="False" IsReadOnly="True"
                                           CanUserAddRows="False"
                                           HeadersVisibility="Column"
@@ -566,26 +566,26 @@
 
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="伺服器名:" VerticalAlignment="Center"
                                                Opacity="0.7" Margin="0,4"/>
-                                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding OPCUAConfig.ServerName}" Margin="4"
+                                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding OPCUA.Config.ServerName}" Margin="4"
                                              Style="{StaticResource MaterialDesignTextBox}"/>
 
                                     <TextBlock Grid.Row="1" Grid.Column="0" Text="端口:" VerticalAlignment="Center"
                                                Opacity="0.7" Margin="0,4"/>
-                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding OPCUAConfig.Port}" Margin="4"
+                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding OPCUA.Config.Port}" Margin="4"
                                              Style="{StaticResource MaterialDesignTextBox}"/>
 
                                     <TextBlock Grid.Row="2" Grid.Column="0" Text="應用名稱:" VerticalAlignment="Center"
                                                Opacity="0.7" Margin="0,4"/>
-                                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding OPCUAConfig.ApplicationName}" Margin="4"
+                                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding OPCUA.Config.ApplicationName}" Margin="4"
                                              Style="{StaticResource MaterialDesignTextBox}"/>
 
                                     <TextBlock Grid.Row="3" Grid.Column="0" Text="最大客戶端:" VerticalAlignment="Center"
                                                Opacity="0.7" Margin="0,4"/>
-                                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding OPCUAConfig.MaxClients}" Margin="4"
+                                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding OPCUA.Config.MaxClients}" Margin="4"
                                              Style="{StaticResource MaterialDesignTextBox}"/>
 
                                     <CheckBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
-                                              Content="啟用安全模式" IsChecked="{Binding OPCUAConfig.EnableSecurity}" Margin="0,6"/>
+                                              Content="啟用安全模式" IsChecked="{Binding OPCUA.Config.EnableSecurity}" Margin="0,6"/>
 
                                     <!-- 端點URL顯示 -->
                                     <Border Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2"
@@ -593,7 +593,7 @@
                                         <StackPanel Orientation="Horizontal">
                                             <materialDesign:PackIcon Kind="Link" Width="14" Height="14"
                                                                       VerticalAlignment="Center" Opacity="0.5" Margin="0,0,6,0"/>
-                                            <TextBlock Text="{Binding OPCUAEndpointUrl}" FontSize="11"
+                                            <TextBlock Text="{Binding OPCUA.EndpointUrl}" FontSize="11"
                                                        FontFamily="Consolas" VerticalAlignment="Center" Opacity="0.8"/>
                                         </StackPanel>
                                     </Border>
@@ -620,14 +620,14 @@
                                     </StackPanel>
                                     <!-- 連接數 Badge -->
                                     <materialDesign:Badged DockPanel.Dock="Right" HorizontalAlignment="Right"
-                                                           Badge="{Binding ConnectedClientCount}"
+                                                           Badge="{Binding OPCUA.ConnectedClientCount}"
                                                            BadgeColorZoneMode="PrimaryMid">
                                         <materialDesign:PackIcon Kind="AccountGroup" Width="20" Height="20"
                                                                   Opacity="0.5"/>
                                     </materialDesign:Badged>
                                 </DockPanel>
 
-                                <ListBox Grid.Row="1" ItemsSource="{Binding ConnectedClients}"
+                                <ListBox Grid.Row="1" ItemsSource="{Binding OPCUA.ConnectedClients}"
                                          BorderThickness="0">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
@@ -667,7 +667,7 @@
                                 <TextBlock Text="系統日誌" FontSize="15" FontWeight="Medium"
                                            VerticalAlignment="Center"/>
                             </StackPanel>
-                            <Button Command="{Binding ClearLogCommand}"
+                            <Button Command="{Binding Log.ClearLogCommand}"
                                     DockPanel.Dock="Right" HorizontalAlignment="Right"
                                     Style="{StaticResource MaterialDesignIconButton}"
                                     Width="30" Height="30" ToolTip="清除日誌">
@@ -676,7 +676,7 @@
                         </DockPanel>
 
                         <TextBox Grid.Row="1"
-                                 Text="{Binding LogMessages, Mode=OneWay}"
+                                 Text="{Binding Log.LogMessages, Mode=OneWay}"
                                  IsReadOnly="True" TextWrapping="Wrap"
                                  VerticalScrollBarVisibility="Auto"
                                  FontFamily="Consolas" FontSize="11"
@@ -707,7 +707,7 @@
                             </materialDesign:PackIcon.Style>
                         </materialDesign:PackIcon>
                         <TextBlock Text="OPC DA" VerticalAlignment="Center" FontSize="12" Margin="0,0,4,0"/>
-                        <TextBlock Text="{Binding OPCDAItemCount, StringFormat='({0} 項目)'}"
+                        <TextBlock Text="{Binding OPCDA.ItemCount, StringFormat='({0} 項目)'}"
                                    VerticalAlignment="Center" FontSize="11" Opacity="0.8"/>
 
                         <Border Width="1" Background="#40000000" Margin="12,2"/>
@@ -726,7 +726,7 @@
                             </materialDesign:PackIcon.Style>
                         </materialDesign:PackIcon>
                         <TextBlock Text="OPC UA" VerticalAlignment="Center" FontSize="12" Margin="0,0,4,0"/>
-                        <TextBlock Text="{Binding OPCUANodeCount, StringFormat='({0} 節點)'}"
+                        <TextBlock Text="{Binding OPCUA.NodeCount, StringFormat='({0} 節點)'}"
                                    VerticalAlignment="Center" FontSize="11" Opacity="0.8"/>
 
                         <Border Width="1" Background="#40000000" Margin="12,2"/>
@@ -734,13 +734,13 @@
                         <!-- 映射數 -->
                         <materialDesign:PackIcon Kind="LinkVariant" Width="14" Height="14"
                                                   VerticalAlignment="Center" Margin="0,0,4,0" Opacity="0.7"/>
-                        <TextBlock Text="{Binding ActiveMappingCount, StringFormat='映射: {0}'}"
+                        <TextBlock Text="{Binding Mapping.ActiveCount, StringFormat='映射: {0}'}"
                                    VerticalAlignment="Center" FontSize="12"/>
                     </StackPanel>
 
                     <!-- 右側時間 -->
                     <TextBlock DockPanel.Dock="Right" HorizontalAlignment="Right"
-                               Text="{Binding CurrentTime, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}"
+                               Text="{Binding Log.CurrentTime, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}"
                                VerticalAlignment="Center" FontSize="12" Opacity="0.8"/>
                 </DockPanel>
             </materialDesign:ColorZone>
