@@ -10,6 +10,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using Microsoft.Toolkit.Mvvm.ComponentModel;
 using Microsoft.Toolkit.Mvvm.Input;
+using OPCGatewayTool.Interfaces;
 using OPCGatewayTool.Models;
 using OPCGatewayTool.Services;
 using NLog;
@@ -23,8 +24,8 @@ namespace OPCGatewayTool.ViewModels
     {
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
-        private readonly TitaniumOPCDAService _opcDaService;
-        private readonly SimpleRealOPCUAService _opcUaService;
+        private readonly IOPCDAService _opcDaService;
+        private readonly IOPCUAService _opcUaService;
         private readonly DataMappingService _dataMappingService;
         private readonly DispatcherTimer _uiUpdateTimer;
         private GatewayConfig _config;

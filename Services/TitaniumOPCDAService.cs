@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Linq;
+using OPCGatewayTool.Interfaces;
 using OPCGatewayTool.Models;
 using NLog;
 using TitaniumAS.Opc.Client.Da;
@@ -12,7 +13,7 @@ using TitaniumAS.Opc.Client.Da.Browsing;
 
 namespace OPCGatewayTool.Services
 {
-    public class TitaniumOPCDAService : IDisposable
+    public class TitaniumOPCDAService : IOPCDAService
     {
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
         

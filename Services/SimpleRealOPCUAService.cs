@@ -10,12 +10,13 @@ using System.Timers;
 using Opc.Ua;
 using Opc.Ua.Server;
 using Opc.Ua.Configuration;
+using OPCGatewayTool.Interfaces;
 using OPCGatewayTool.Models;
 using NLog;
 
 namespace OPCGatewayTool.Services
 {
-    public class SimpleRealOPCUAService : IDisposable
+    public class SimpleRealOPCUAService : IOPCUAService
     {
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 

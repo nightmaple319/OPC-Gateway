@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Collections.Concurrent;
+using OPCGatewayTool.Interfaces;
 using OPCGatewayTool.Models;
 using NLog;
 
@@ -12,9 +13,9 @@ namespace OPCGatewayTool.Services
     public class DataMappingService : IDisposable
     {
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
-        
-        private readonly TitaniumOPCDAService _opcDaService;
-        private readonly SimpleRealOPCUAService _opcUaService;
+
+        private readonly IOPCDAService _opcDaService;
+        private readonly IOPCUAService _opcUaService;
         private readonly ConcurrentDictionary<string, ItemMapping> _mappings;
         private bool _disposed;
         private bool _isEnabled;
@@ -40,7 +41,7 @@ namespace OPCGatewayTool.Services
         public int TotalMappings => _mappings.Count;
         public int ActiveMappings => _mappings.Count(m => m.Value.IsEnabled);
 
-        public DataMappingService(TitaniumOPCDAService opcDaService, SimpleRealOPCUAService opcUaService)
+        public DataMappingService(IOPCDAService opcDaService, IOPCUAService opcUaService)
         {
             _opcDaService = opcDaService ?? throw new ArgumentNullException(nameof(opcDaService));
             _opcUaService = opcUaService ?? throw new ArgumentNullException(nameof(opcUaService));
