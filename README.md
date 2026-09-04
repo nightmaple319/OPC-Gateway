@@ -247,7 +247,7 @@ dotnet publish --configuration Release --self-contained true --runtime win-x64
 
 如有問題或建議，請通過以下方式聯絡：
 - 建立 GitHub Issue
-- 發送郵件至 [your-email@example.com]
+- 發送郵件至 [nightmaple319@gmail.com]
 
 ## 版本歷史
 
