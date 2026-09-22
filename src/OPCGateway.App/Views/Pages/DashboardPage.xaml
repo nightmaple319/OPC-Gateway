@@ -1,0 +1,290 @@
+<Page x:Class="OPCGateway.App.Views.Pages.DashboardPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:vm="clr-namespace:OPCGateway.App.ViewModels"
+      xmlns:engine="clr-namespace:OPCGateway.Core.Engine;assembly=OPCGateway.Core"
+      mc:Ignorable="d"
+      d:DataContext="{d:DesignInstance vm:DashboardViewModel}"
+      Title="監控">
+
+    <Grid Margin="20,16,20,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- ===== KPI 卡片 ===== -->
+        <UniformGrid Grid.Row="0" Columns="6" Margin="-6,0,-6,12">
+            <ui:Card Margin="6,0" Padding="14,10">
+                <StackPanel>
+                    <TextBlock Text="OPC DA 來源" Style="{StaticResource KpiCaption}" />
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="PlugConnected24" FontSize="20" Margin="0,0,8,0"
+                                       Foreground="{Binding DaConnected, Converter={StaticResource BoolToStatusBrush}}" />
+                        <TextBlock FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"
+                                   Foreground="{Binding DaConnected, Converter={StaticResource BoolToStatusBrush}}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="未連線" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding DaConnected}" Value="True">
+                                            <Setter Property="Text" Value="已連線" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                    <TextBlock Text="{Binding DaServerText}" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,4,0,0"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" ToolTip="{Binding DaServerText}" />
+                </StackPanel>
+            </ui:Card>
+
+            <ui:Card Margin="6,0" Padding="14,10">
+                <StackPanel>
+                    <TextBlock Text="OPC UA 伺服器" Style="{StaticResource KpiCaption}" />
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="Server24" FontSize="20" Margin="0,0,8,0"
+                                       Foreground="{Binding UaRunning, Converter={StaticResource BoolToStatusBrush}}" />
+                        <TextBlock FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"
+                                   Foreground="{Binding UaRunning, Converter={StaticResource BoolToStatusBrush}}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="未啟動" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding UaRunning}" Value="True">
+                                            <Setter Property="Text" Value="運作中" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                    <DockPanel Margin="0,4,0,0">
+                        <ui:Button DockPanel.Dock="Right" Icon="{ui:SymbolIcon Copy24}" Padding="4" Margin="4,0,0,0"
+                                   Command="{Binding CopyEndpointsCommand}" ToolTip="複製端點 URL"
+                                   Visibility="{Binding UaRunning, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Text="{Binding EndpointsText}" FontSize="11" TextTrimming="CharacterEllipsis"
+                                   Style="{StaticResource MonoText}" ToolTip="{Binding EndpointsText}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </DockPanel>
+                </StackPanel>
+            </ui:Card>
+
+            <ui:Card Margin="6,0" Padding="14,10">
+                <StackPanel>
+                    <TextBlock Text="標籤（運作中 / 全部）" Style="{StaticResource KpiCaption}" />
+                    <TextBlock Style="{StaticResource KpiValue}">
+                        <Run Text="{Binding ActiveTagCount, Mode=OneWay}" /><Run Text=" / " Foreground="{DynamicResource TextFillColorSecondaryBrush}" /><Run Text="{Binding TagCount, Mode=OneWay}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </TextBlock>
+                    <TextBlock FontSize="11" Margin="0,4,0,0"
+                               Foreground="{Binding ProblemTagCount, Converter={StaticResource CountToVisibility}, ConverterParameter=nonzero, FallbackValue={x:Null}}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <Setter Property="Text" Value="全部正常" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ProblemTagCount, Converter={StaticResource CountToVisibility}, ConverterParameter=nonzero}" Value="Visible">
+                                        <Setter Property="Foreground" Value="{DynamicResource StatusWarningBrush}" />
+                                        <Setter Property="Text" Value="{Binding ProblemTagCount, StringFormat={}{0} 個標籤異常}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
+            </ui:Card>
+
+            <ui:Card Margin="6,0" Padding="14,10">
+                <StackPanel>
+                    <TextBlock Text="更新 / 秒" Style="{StaticResource KpiCaption}" />
+                    <TextBlock Text="{Binding UpdatesPerSecond, StringFormat={}{0:0.0}}" Style="{StaticResource KpiValue}" />
+                    <TextBlock FontSize="11" Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                        <Run Text="累計 " /><Run Text="{Binding TotalUpdates, Mode=OneWay, StringFormat={}{0:N0}}" />
+                    </TextBlock>
+                </StackPanel>
+            </ui:Card>
+
+            <ui:Card Margin="6,0" Padding="14,10">
+                <StackPanel>
+                    <TextBlock Text="壞品質 / 丟棄" Style="{StaticResource KpiCaption}" />
+                    <TextBlock Style="{StaticResource KpiValue}">
+                        <Run Text="{Binding BadQualityUpdates, Mode=OneWay, StringFormat={}{0:N0}}" /><Run Text=" / " Foreground="{DynamicResource TextFillColorSecondaryBrush}" /><Run Text="{Binding DroppedUpdates, Mode=OneWay, StringFormat={}{0:N0}}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </TextBlock>
+                    <TextBlock FontSize="11" Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                        <Run Text="最後更新 " /><Run Text="{Binding LastUpdateText, Mode=OneWay}" />
+                    </TextBlock>
+                </StackPanel>
+            </ui:Card>
+
+            <ui:Card Margin="6,0" Padding="14,10">
+                <StackPanel>
+                    <TextBlock Text="客戶端 / 運行時間" Style="{StaticResource KpiCaption}" />
+                    <TextBlock Text="{Binding ClientCount}" Style="{StaticResource KpiValue}" />
+                    <TextBlock FontSize="11" Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                        <Run Text="運行 " /><Run Text="{Binding UptimeText, Mode=OneWay}" />
+                    </TextBlock>
+                </StackPanel>
+            </ui:Card>
+        </UniformGrid>
+
+        <!-- ===== 工具列 ===== -->
+        <DockPanel Grid.Row="1" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                <ui:Button Content="全部啟用" Icon="{ui:SymbolIcon Play24}" Command="{Binding EnableAllCommand}" Margin="8,0,0,0"
+                           Visibility="{Binding HasTags, Converter={StaticResource BoolToVisibility}}" />
+                <ui:Button Content="全部停用" Icon="{ui:SymbolIcon Pause24}" Command="{Binding DisableAllCommand}" Margin="8,0,0,0"
+                           Visibility="{Binding HasTags, Converter={StaticResource BoolToVisibility}}" />
+                <ui:Button Content="移除全部" Icon="{ui:SymbolIcon Delete24}" Command="{Binding ClearAllCommand}" Margin="8,0,0,0"
+                           Visibility="{Binding HasTags, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <ui:TextBox Width="320" PlaceholderText="篩選 ItemId 或 UA 名稱…" Icon="{ui:SymbolIcon Search24}"
+                            Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" ClearButtonEnabled="True" />
+                <ui:ToggleSwitch Content="只看異常" Margin="16,0,0,0" IsChecked="{Binding ShowOnlyProblems}" />
+            </StackPanel>
+        </DockPanel>
+
+        <!-- ===== 標籤表 + 客戶端 ===== -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="500" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="240" MinWidth="200" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource CardBorder}" Padding="0">
+                <Grid>
+                    <DataGrid ItemsSource="{Binding TagsView}"
+                                 SelectedItem="{Binding SelectedTag}"
+                                 AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                                 IsReadOnly="False" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                 SelectionMode="Extended" SelectionUnit="FullRow"
+                                 EnableRowVirtualization="True" EnableColumnVirtualization="False"
+                                 VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                                 RowHeight="32" BorderThickness="0"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                 Visibility="{Binding HasTags, Converter={StaticResource BoolToVisibility}}">
+                        <DataGrid.Resources>
+                            <ContextMenu x:Key="RowMenu">
+                                <MenuItem Header="啟用 / 停用" Command="{Binding PlacementTarget.Tag.ToggleTagCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}" />
+                                <MenuItem Header="複製 NodeId" Command="{Binding PlacementTarget.Tag.CopyNodeIdCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}" />
+                                <Separator />
+                                <MenuItem Header="移除標籤" Command="{Binding PlacementTarget.Tag.RemoveTagCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}" />
+                            </ContextMenu>
+                        </DataGrid.Resources>
+                        <DataGrid.CellStyle>
+                            <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                <Setter Property="Padding" Value="8,0" />
+                            </Style>
+                        </DataGrid.CellStyle>
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="ContextMenu" Value="{StaticResource RowMenu}" />
+                                <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}" />
+                            </Style>
+                        </DataGrid.RowStyle>
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="狀態" Width="92" SortMemberPath="State">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate DataType="{x:Type engine:TagMapping}">
+                                        <Border Style="{StaticResource Pill}" Background="{Binding State, Converter={StaticResource TagStateToBackground}}" ToolTip="{Binding ErrorMessage}" MaxWidth="84">
+                                            <StackPanel Orientation="Horizontal">
+                                                <ui:SymbolIcon Symbol="{Binding State, Converter={StaticResource TagStateToSymbol}}" FontSize="14" Margin="0,0,4,0"
+                                                               Foreground="{Binding State, Converter={StaticResource TagStateToForeground}}" />
+                                                <TextBlock Text="{Binding StateText}" FontSize="12" Foreground="{Binding State, Converter={StaticResource TagStateToForeground}}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="OPC DA ItemId" Binding="{Binding ItemId}" Width="*" MinWidth="170" IsReadOnly="True"
+                                                ElementStyle="{StaticResource MonoText}" />
+                            <DataGridTextColumn Header="UA 名稱" Binding="{Binding BrowseName, UpdateSourceTrigger=LostFocus}" Width="110"
+                                                ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn Header="值" Binding="{Binding ValueText}" Width="90" IsReadOnly="True"
+                                                ElementStyle="{StaticResource MonoTextRight}" />
+                            <DataGridTemplateColumn Header="品質" Width="130" SortMemberPath="Quality">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate DataType="{x:Type engine:TagMapping}">
+                                        <Border Style="{StaticResource Pill}" Background="{Binding QualityMaster, Converter={StaticResource QualityToBackground}}"
+                                                ToolTip="{Binding QualityText}" MaxWidth="118">
+                                            <TextBlock Text="{Binding QualityText}" FontSize="12" TextTrimming="CharacterEllipsis"
+                                                       Foreground="{Binding QualityMaster, Converter={StaticResource QualityToForeground}}" />
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="型別" Binding="{Binding DataTypeName}" Width="64" IsReadOnly="True"
+                                                ElementStyle="{StaticResource CellText}" />
+                            <DataGridTextColumn Header="時間戳" Binding="{Binding TimestampLocal, StringFormat={}{0:HH:mm:ss.fff}}" Width="104" IsReadOnly="True"
+                                                ElementStyle="{StaticResource MonoText}" />
+                            <DataGridTextColumn Header="更新數" Binding="{Binding UpdateCount, StringFormat={}{0:N0}}" Width="64" IsReadOnly="True"
+                                                ElementStyle="{StaticResource MonoTextRight}" />
+                            <DataGridCheckBoxColumn Header="啟用" Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}" Width="52" />
+                            <DataGridCheckBoxColumn Header="可寫" Binding="{Binding AllowWrite, UpdateSourceTrigger=PropertyChanged}" Width="52" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- 空狀態 -->
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                Visibility="{Binding HasTags, Converter={StaticResource InverseBoolToVisibility}}">
+                        <ui:SymbolIcon Symbol="Tag24" FontSize="40" HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                        <TextBlock Text="尚未建立任何標籤" Style="{StaticResource EmptyStateTitle}" />
+                        <TextBlock Style="{StaticResource EmptyStateText}"
+                                   Text="到左側「標籤」頁連線 OPC DA 伺服器，勾選要轉換的項目後按「加入勾選項目」。加入的標籤會立即出現在 OPC UA 的 Gateway 資料夾下。" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="8" HorizontalAlignment="Stretch" Background="Transparent" />
+
+            <Border Grid.Column="2" Style="{StaticResource CardBorder}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                        <ui:SymbolIcon Symbol="People24" FontSize="18" Margin="0,0,8,0" />
+                        <TextBlock Text="已連線的 UA 客戶端" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <Border Style="{StaticResource Pill}" Margin="8,0,0,0" Background="{DynamicResource StatusNeutralBackgroundBrush}">
+                            <TextBlock Text="{Binding ClientCount}" FontSize="12" />
+                        </Border>
+                    </StackPanel>
+
+                    <ListView Grid.Row="1" ItemsSource="{Binding Clients}" BorderThickness="0" Background="Transparent"
+                              Visibility="{Binding HasClients, Converter={StaticResource BoolToVisibility}}"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,4">
+                                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding EndpointUrl}" FontSize="11" TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                        <Run Text="{Binding SecurityMode, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding UserIdentity, Mode=OneWay}" /><Run Text=" · 訂閱 " /><Run Text="{Binding SubscriptionCount, Mode=OneWay}" />
+                                    </TextBlock>
+                                    <TextBlock FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="{Binding ConnectedAtUtc, Converter={StaticResource DateTimeToLocalText}, ConverterParameter='yyyy-MM-dd HH:mm:ss', StringFormat=連線於 {0}}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <StackPanel Grid.Row="1" VerticalAlignment="Center"
+                                Visibility="{Binding HasClients, Converter={StaticResource InverseBoolToVisibility}}">
+                        <TextBlock Style="{StaticResource EmptyStateText}" Text="目前沒有客戶端連線。" />
+                        <TextBlock Style="{StaticResource EmptyStateText}" Margin="0,4,0,0"
+                                   Text="以 UaExpert 等工具連到上方端點，可在 Objects → Gateway 下瀏覽標籤。" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Page>

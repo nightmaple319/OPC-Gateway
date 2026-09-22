@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>OPCGateway.Core</RootNamespace>
+    <AssemblyName>OPCGateway.Core</AssemblyName>
+    <Description>OPC DA to OPC UA gateway core: DA client, UA server host, mapping engine, configuration. No UI dependencies.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TitaniumAS.Opc.Client" Version="1.0.2" />
+    <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua.Server" Version="1.5.378.176" />
+    <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua.Configuration" Version="1.5.378.176" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
+    <PackageReference Include="System.Threading.Channels" Version="10.0.12" />
+  </ItemGroup>
+
+</Project>

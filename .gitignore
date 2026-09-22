@@ -1,9 +1,11 @@
-# Claude Code
+# Claude Code（本機開發指引，不公開）
 .claude/
+CLAUDE.md
 
 # Build results
 bin/
 obj/
+TestResults/
 
 # NuGet
 *.nupkg
@@ -19,9 +21,11 @@ packages/
 # Rider
 .idea/
 
-# Logs
+# Logs and runtime artifacts
 Logs/
 *.log
+*.bak
+*.tmp
 
 # OS files
 Thumbs.db

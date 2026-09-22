@@ -1,0 +1,243 @@
+<Page x:Class="OPCGateway.App.Views.Pages.MappingPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:vm="clr-namespace:OPCGateway.App.ViewModels"
+      mc:Ignorable="d"
+      d:DataContext="{d:DesignInstance vm:MappingViewModel}"
+      Title="標籤">
+
+    <Grid Margin="20,16,20,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- ===== 標題與伺服器 ===== -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,12">
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                <StackPanel Orientation="Horizontal" Margin="0,0,12,0"
+                            Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}">
+                    <ui:ProgressRing IsIndeterminate="True" Width="18" Height="18" Margin="0,0,8,0" />
+                    <TextBlock Text="{Binding BusyMessage}" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+                <ui:Button Content="連線 OPC DA" Icon="{ui:SymbolIcon PlugConnected24}" Appearance="Primary"
+                           Command="{Binding ConnectDaCommand}"
+                           Visibility="{Binding DaConnected, Converter={StaticResource InverseBoolToVisibility}}" />
+                <ui:Button Content="重新整理" Icon="{ui:SymbolIcon ArrowSync24}" Command="{Binding RefreshCommand}"
+                           Visibility="{Binding DaConnected, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+            <StackPanel>
+                <TextBlock Text="OPC DA 位址空間" Style="{StaticResource SectionTitle}" Margin="0" />
+                <TextBlock Text="{Binding ServerText}" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+        </DockPanel>
+
+        <!-- ===== 主要內容 ===== -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="360" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="1.2*" MinWidth="360" />
+            </Grid.ColumnDefinitions>
+
+            <!-- 樹狀瀏覽 -->
+            <Border Grid.Column="0" Style="{StaticResource CardBorder}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="瀏覽" FontWeight="SemiBold" Margin="0,0,0,8" />
+
+                    <TreeView Grid.Row="1" ItemsSource="{Binding RootNodes}" BorderThickness="0" Background="Transparent"
+                              VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling"
+                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                              Visibility="{Binding HasTree, Converter={StaticResource BoolToVisibility}}">
+                        <TreeView.ItemContainerStyle>
+                            <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
+                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                            </Style>
+                        </TreeView.ItemContainerStyle>
+                        <TreeView.Resources>
+                            <ContextMenu x:Key="FolderMenu">
+                                <MenuItem Header="加入此資料夾下的所有項目"
+                                          Command="{Binding PlacementTarget.Tag.AddFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          CommandParameter="{Binding}" />
+                            </ContextMenu>
+                            <ContextMenu x:Key="ItemMenu">
+                                <MenuItem Header="加入這個項目"
+                                          Command="{Binding PlacementTarget.Tag.AddNodeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          CommandParameter="{Binding}" />
+                            </ContextMenu>
+                        </TreeView.Resources>
+                        <TreeView.ItemTemplate>
+                            <HierarchicalDataTemplate DataType="{x:Type vm:TreeNodeViewModel}" ItemsSource="{Binding Children}">
+                                <StackPanel Orientation="Horizontal" Margin="0,1"
+                                            Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsFolder}" Value="True">
+                                                    <Setter Property="ContextMenu" Value="{StaticResource FolderMenu}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsItem}" Value="True">
+                                                    <Setter Property="ContextMenu" Value="{StaticResource ItemMenu}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                    <CheckBox IsChecked="{Binding IsChecked}" Margin="0,0,4,0" VerticalAlignment="Center"
+                                              Visibility="{Binding IsItem, Converter={StaticResource BoolToVisibility}}" />
+                                    <ui:SymbolIcon FontSize="16" Margin="0,0,6,0" VerticalAlignment="Center">
+                                        <ui:SymbolIcon.Style>
+                                            <Style TargetType="ui:SymbolIcon">
+                                                <Setter Property="Symbol" Value="Tag24" />
+                                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsFolder}" Value="True">
+                                                        <Setter Property="Symbol" Value="Folder24" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource StatusWarningBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsPlaceholder}" Value="True">
+                                                        <Setter Property="Symbol" Value="Clock24" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsMapped}" Value="True">
+                                                        <Setter Property="Symbol" Value="CheckmarkCircle24" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource StatusGoodBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ui:SymbolIcon.Style>
+                                    </ui:SymbolIcon>
+                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" ToolTip="{Binding ItemId}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsPlaceholder}" Value="True">
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                        <Setter Property="FontStyle" Value="Italic" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Text="已加入" FontSize="10" Margin="8,0,0,0" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource StatusGoodBrush}"
+                                               Visibility="{Binding IsMapped, Converter={StaticResource BoolToVisibility}}" />
+                                    <TextBlock Text="（部分顯示）" FontSize="10" Margin="8,0,0,0" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource StatusWarningBrush}"
+                                               Visibility="{Binding IsTruncated, Converter={StaticResource BoolToVisibility}}" />
+                                </StackPanel>
+                            </HierarchicalDataTemplate>
+                        </TreeView.ItemTemplate>
+                    </TreeView>
+
+                    <!-- 未連線的空狀態 -->
+                    <StackPanel Grid.Row="1" VerticalAlignment="Center"
+                                Visibility="{Binding HasTree, Converter={StaticResource InverseBoolToVisibility}}">
+                        <ui:SymbolIcon Symbol="PlugDisconnected24" FontSize="40" HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                        <TextBlock>
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTitle}">
+                                    <Setter Property="Text" Value="尚未連線 OPC DA 伺服器" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding DaConnected}" Value="True">
+                                            <Setter Property="Text" Value="正在讀取位址空間…" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Style="{StaticResource EmptyStateText}"
+                                   Text="按右上角「連線 OPC DA」即可瀏覽伺服器的項目。連線參數在「設定」頁修改。" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="8" HorizontalAlignment="Stretch" Background="Transparent" />
+
+            <!-- 搜尋 -->
+            <Border Grid.Column="2" Style="{StaticResource CardBorder}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="搜尋項目" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <DockPanel Grid.Row="1" Margin="0,0,0,8">
+                        <ui:Button DockPanel.Dock="Right" Icon="{ui:SymbolIcon Dismiss24}" Margin="4,0,0,0"
+                                   Command="{Binding ClearSearchCommand}" ToolTip="清除搜尋"
+                                   Visibility="{Binding HasSearchResults, Converter={StaticResource BoolToVisibility}}" />
+                        <ui:Button DockPanel.Dock="Right" Content="搜尋" Icon="{ui:SymbolIcon Search24}" Margin="8,0,0,0"
+                                   Command="{Binding SearchCommand}" />
+                        <ui:TextBox PlaceholderText="輸入名稱或 ItemId 的一部分，按 Enter 搜尋整個伺服器…"
+                                    Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" ClearButtonEnabled="True"
+                                    IsEnabled="{Binding DaConnected}">
+                            <ui:TextBox.InputBindings>
+                                <KeyBinding Key="Enter" Command="{Binding SearchCommand}" />
+                            </ui:TextBox.InputBindings>
+                        </ui:TextBox>
+                    </DockPanel>
+
+                    <ListView Grid.Row="2" ItemsSource="{Binding SearchResults}" BorderThickness="0" Background="Transparent"
+                              VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                              Visibility="{Binding HasSearchResults, Converter={StaticResource BoolToVisibility}}">
+                        <ListView.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:SearchResultViewModel}">
+                                <DockPanel Margin="0,2">
+                                    <CheckBox DockPanel.Dock="Left" IsChecked="{Binding IsChecked}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <ui:Button DockPanel.Dock="Right" Icon="{ui:SymbolIcon Add24}" Padding="4"
+                                               Command="{Binding DataContext.AddSearchResultCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                               CommandParameter="{Binding}" ToolTip="加入這個項目"
+                                               Visibility="{Binding IsMapped, Converter={StaticResource InverseBoolToVisibility}}" />
+                                    <TextBlock DockPanel.Dock="Right" Text="已加入" FontSize="10" Margin="8,0" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource StatusGoodBrush}"
+                                               Visibility="{Binding IsMapped, Converter={StaticResource BoolToVisibility}}" />
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}" />
+                                        <TextBlock Text="{Binding ItemId}" FontSize="11" Style="{StaticResource MonoText}"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <StackPanel Grid.Row="2" VerticalAlignment="Center"
+                                Visibility="{Binding HasSearchResults, Converter={StaticResource InverseBoolToVisibility}}">
+                        <ui:SymbolIcon Symbol="Search24" FontSize="40" HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                        <TextBlock Text="搜尋整個位址空間" Style="{StaticResource EmptyStateTitle}" />
+                        <TextBlock Style="{StaticResource EmptyStateText}"
+                                   Text="適合有數千個標籤的伺服器。也可以在左側樹狀圖對資料夾按右鍵，一次加入整個資料夾。" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ===== 底部動作列 ===== -->
+        <DockPanel Grid.Row="2" Margin="0,12,0,0">
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                <ui:Button Content="取消勾選" Command="{Binding UncheckAllCommand}" Margin="0,0,8,0"
+                           Visibility="{Binding CheckedCount, Converter={StaticResource CountToVisibility}, ConverterParameter=nonzero}" />
+                <ui:Button Icon="{ui:SymbolIcon Add24}" Appearance="Primary" Command="{Binding AddCheckedCommand}">
+                    <ui:Button.Content>
+                        <TextBlock>
+                            <Run Text="加入勾選項目" /><Run Text=" (" /><Run Text="{Binding CheckedCount, Mode=OneWay}" /><Run Text=")" />
+                        </TextBlock>
+                    </ui:Button.Content>
+                </ui:Button>
+            </StackPanel>
+            <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+        </DockPanel>
+    </Grid>
+</Page>

@@ -1,0 +1,42 @@
+{
+  "DaSource": {
+    "ProgId": "Matrikon.OPC.Simulation.1",
+    "Host": "localhost",
+    "UpdateRateMs": 1000,
+    "PercentDeadband": 0.0,
+    "ConnectTimeoutSeconds": 10,
+    "ReconnectIntervalSeconds": 10,
+    "HealthCheckIntervalSeconds": 5,
+    "BranchSeparator": "."
+  },
+  "UaServer": {
+    "ServerName": "OPC Gateway Server",
+    "ApplicationName": "OPC DA to UA Gateway",
+    "ApplicationUri": "urn:localhost:OPCGateway",
+    "ProductUri": "urn:opcgateway:tool",
+    "Port": 4840,
+    "UseHostNameInEndpoint": true,
+    "AllowNoSecurity": true,
+    "EnableSecurity": false,
+    "AutoAcceptClientCertificates": true,
+    "MaxSessions": 100,
+    "NamespaceUri": "urn:opcgateway:da",
+    "RootFolderName": "Gateway",
+    "MirrorDaHierarchy": true,
+    "CertificateStoreRoot": "%CommonApplicationData%\\OPC Foundation\\CertificateStores"
+  },
+  "Tags": [
+    { "ItemId": "Random.Int1", "Enabled": true, "AllowWrite": false },
+    { "ItemId": "Random.Real4", "Enabled": true, "AllowWrite": false },
+    { "ItemId": "Saw-toothed Waves.Int1", "Enabled": true, "AllowWrite": false },
+    { "ItemId": "Square Waves.Real4", "Enabled": true, "AllowWrite": false },
+    { "ItemId": "Triangle Waves.Real4", "Enabled": true, "AllowWrite": false }
+  ],
+  "Options": {
+    "AutoStart": false,
+    "UiRefreshIntervalMs": 250,
+    "LogBufferSize": 2000,
+    "ValueQueueCapacity": 100000,
+    "BrowseChildLimit": 2000
+  }
+}

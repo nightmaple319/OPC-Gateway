@@ -1,0 +1,93 @@
+<Page x:Class="OPCGateway.App.Views.Pages.LogPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:vm="clr-namespace:OPCGateway.App.ViewModels"
+      xmlns:logging="clr-namespace:OPCGateway.Core.Logging;assembly=OPCGateway.Core"
+      mc:Ignorable="d"
+      d:DataContext="{d:DesignInstance vm:LogViewModel}"
+      Title="日誌">
+
+    <Grid Margin="20,16,20,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- ===== 工具列 ===== -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                <Border Style="{StaticResource Pill}" Background="{DynamicResource StatusWarningBackgroundBrush}" Margin="0,0,8,0"
+                        Visibility="{Binding WarningCount, Converter={StaticResource CountToVisibility}, ConverterParameter=nonzero}">
+                    <TextBlock FontSize="12" Foreground="{DynamicResource StatusWarningBrush}">
+                        <Run Text="警告 " /><Run Text="{Binding WarningCount, Mode=OneWay}" FontWeight="SemiBold" />
+                    </TextBlock>
+                </Border>
+                <Border Style="{StaticResource Pill}" Background="{DynamicResource StatusBadBackgroundBrush}" Margin="0,0,12,0"
+                        Visibility="{Binding ErrorCount, Converter={StaticResource CountToVisibility}, ConverterParameter=nonzero}">
+                    <TextBlock FontSize="12" Foreground="{DynamicResource StatusBadBrush}">
+                        <Run Text="錯誤 " /><Run Text="{Binding ErrorCount, Mode=OneWay}" FontWeight="SemiBold" />
+                    </TextBlock>
+                </Border>
+                <ui:Button Content="暫停" Icon="{ui:SymbolIcon Pause24}" Command="{Binding TogglePauseCommand}" ToolTip="暫停畫面更新（日誌仍會寫入檔案）" Margin="0,0,8,0"
+                           Visibility="{Binding IsPaused, Converter={StaticResource InverseBoolToVisibility}}" />
+                <ui:Button Content="繼續" Icon="{ui:SymbolIcon Play24}" Appearance="Caution" Command="{Binding TogglePauseCommand}" ToolTip="繼續更新" Margin="0,0,8,0"
+                           Visibility="{Binding IsPaused, Converter={StaticResource BoolToVisibility}}" />
+                <ui:Button Content="清除" Icon="{ui:SymbolIcon Delete24}" Command="{Binding ClearCommand}" Margin="0,0,8,0" />
+                <ui:Button Content="匯出…" Icon="{ui:SymbolIcon ArrowUpload24}" Command="{Binding ExportCommand}" Margin="0,0,8,0" />
+                <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" Command="{Binding OpenLogFolderCommand}" ToolTip="開啟 Logs 資料夾" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="等級" Style="{StaticResource FieldLabel}" />
+                <ComboBox ItemsSource="{Binding SeverityOptions}" SelectedItem="{Binding MinSeverity}" Width="110" Margin="0,0,16,0">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Converter={StaticResource LogSeverityToText}}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <ui:TextBox Width="300" PlaceholderText="篩選訊息或來源…" Icon="{ui:SymbolIcon Filter24}" ClearButtonEnabled="True"
+                            Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" />
+                <ui:ToggleSwitch Content="自動捲動" Margin="16,0,0,0" IsChecked="{Binding AutoScroll}" />
+            </StackPanel>
+        </DockPanel>
+
+        <!-- ===== 日誌清單 ===== -->
+        <Border Grid.Row="1" Style="{StaticResource CardBorder}" Padding="0">
+            <ListView x:Name="LogList" ItemsSource="{Binding EntriesView}" SelectedItem="{Binding SelectedEntry}"
+                      BorderThickness="0" Background="Transparent"
+                      HorizontalContentAlignment="Stretch"
+                      VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling"
+                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                      ScrollViewer.CanContentScroll="True">
+                <ListView.InputBindings>
+                    <KeyBinding Modifiers="Ctrl" Key="C" Command="{Binding CopyEntryCommand}" />
+                </ListView.InputBindings>
+                <ListView.ItemTemplate>
+                    <DataTemplate DataType="{x:Type logging:LogEntry}">
+                        <Grid Background="{Binding Severity, Converter={StaticResource LogSeverityToBrush}, ConverterParameter=background}"
+                              ToolTip="{Binding Exception}" ToolTipService.IsEnabled="{Binding HasException}" Margin="0,1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="100" />
+                                <ColumnDefinition Width="56" />
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding Timestamp, StringFormat={}{0:HH:mm:ss.fff}}" Style="{StaticResource MonoText}" FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Grid.Column="1" Text="{Binding Severity, Converter={StaticResource LogSeverityToText}}" FontSize="12" FontWeight="SemiBold"
+                                       Foreground="{Binding Severity, Converter={StaticResource LogSeverityToBrush}}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Text="{Binding ShortLogger}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" ToolTip="{Binding Logger}" />
+                            <TextBlock Grid.Column="3" Text="{Binding Message}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center"
+                                       Foreground="{Binding Severity, Converter={StaticResource LogSeverityToBrush}}" />
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Border>
+    </Grid>
+</Page>

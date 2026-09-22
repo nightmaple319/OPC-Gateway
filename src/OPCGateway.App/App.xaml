@@ -1,0 +1,34 @@
+<Application x:Class="OPCGateway.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:conv="clr-namespace:OPCGateway.App.Converters"
+             ShutdownMode="OnMainWindowClose">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ui:ThemesDictionary Theme="Light" />
+                <ui:ControlsDictionary />
+                <ResourceDictionary Source="Resources/SemanticColors.Light.xaml" />
+                <ResourceDictionary Source="Resources/Surfaces.Light.xaml" />
+                <ResourceDictionary Source="Resources/Styles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+            <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
+            <conv:InverseBooleanConverter x:Key="InverseBool" />
+            <conv:NullToVisibilityConverter x:Key="NullToVisibility" />
+            <conv:CountToVisibilityConverter x:Key="CountToVisibility" />
+            <conv:QualityToForegroundConverter x:Key="QualityToForeground" />
+            <conv:QualityToBackgroundConverter x:Key="QualityToBackground" />
+            <conv:TagStateToForegroundConverter x:Key="TagStateToForeground" />
+            <conv:TagStateToBackgroundConverter x:Key="TagStateToBackground" />
+            <conv:TagStateToSymbolConverter x:Key="TagStateToSymbol" />
+            <conv:BoolToStatusBrushConverter x:Key="BoolToStatusBrush" />
+            <conv:RunStateToBrushConverter x:Key="RunStateToBrush" />
+            <conv:LogSeverityToBrushConverter x:Key="LogSeverityToBrush" />
+            <conv:LogSeverityToTextConverter x:Key="LogSeverityToText" />
+            <conv:DateTimeToLocalTextConverter x:Key="DateTimeToLocalText" />
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

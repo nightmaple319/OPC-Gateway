@@ -1,0 +1,155 @@
+<Window x:Class="OPCGateway.App.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:pages="clr-namespace:OPCGateway.App.Views.Pages"
+        xmlns:vm="clr-namespace:OPCGateway.App.ViewModels"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance vm:ShellViewModel}"
+        Title="OPC DA to OPC UA Gateway"
+        Icon="pack://application:,,,/Assets/app.ico"
+        Width="1320" Height="860" MinWidth="980" MinHeight="620"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource ApplicationBackgroundBrush}"
+        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+        FontSize="13">
+
+    <Window.InputBindings>
+        <KeyBinding Modifiers="Ctrl" Key="S" Command="{Binding SaveConfigCommand}" />
+        <KeyBinding Key="F5" Command="{Binding StartGatewayCommand}" />
+        <KeyBinding Modifiers="Shift" Key="F5" Command="{Binding StopGatewayCommand}" />
+    </Window.InputBindings>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- ===== 命令列 ===== -->
+        <Border Grid.Row="0" Padding="16,10"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+                    <Image Source="pack://application:,,,/Assets/app.png" Width="24" Height="24"
+                           VerticalAlignment="Center" Margin="0,0,10,0"
+                           RenderOptions.BitmapScalingMode="HighQuality" />
+                    <TextBlock Text="OPC Gateway" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Text="DA → UA" FontSize="12" VerticalAlignment="Center" Margin="10,2,0,0"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+                    <Border Style="{StaticResource Pill}" Margin="20,0,0,0"
+                            Background="{Binding RunState, Converter={StaticResource RunStateToBrush}, ConverterParameter=background}">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="8" Height="8" Margin="0,0,6,0" VerticalAlignment="Center"
+                                     Fill="{Binding RunState, Converter={StaticResource RunStateToBrush}}" />
+                            <TextBlock Text="{Binding RunStateText}" FontWeight="SemiBold"
+                                       Foreground="{Binding RunState, Converter={StaticResource RunStateToBrush}}" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,12,0"
+                                Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}">
+                        <ui:ProgressRing IsIndeterminate="True" Width="18" Height="18" Margin="0,0,8,0" />
+                        <TextBlock Text="{Binding BusyMessage}" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                    <ui:Button Content="啟動閘道" Icon="{ui:SymbolIcon Play24}" Appearance="Primary"
+                               Command="{Binding StartGatewayCommand}" ToolTip="連線 OPC DA、訂閱標籤並啟動 OPC UA 伺服器 (F5)" />
+                    <ui:Button Content="停止閘道" Icon="{ui:SymbolIcon Stop24}" Margin="8,0,0,0"
+                               Command="{Binding StopGatewayCommand}" ToolTip="停止 OPC UA 伺服器並中斷 OPC DA (Shift+F5)" />
+                    <ui:Button Icon="{ui:SymbolIcon WeatherMoon24}" Margin="8,0,0,0"
+                               Command="{Binding ToggleThemeCommand}" ToolTip="切換為深色主題"
+                               Visibility="{Binding IsDarkTheme, Converter={StaticResource InverseBoolToVisibility}}" />
+                    <ui:Button Icon="{ui:SymbolIcon WeatherSunny24}" Margin="8,0,0,0"
+                               Command="{Binding ToggleThemeCommand}" ToolTip="切換為淺色主題"
+                               Visibility="{Binding IsDarkTheme, Converter={StaticResource BoolToVisibility}}" />
+                    <ui:Button Icon="{ui:SymbolIcon Save24}" Margin="8,0,0,0"
+                               Command="{Binding SaveConfigCommand}" ToolTip="儲存設定 (Ctrl+S)" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ===== 錯誤提示 ===== -->
+        <ui:InfoBar Grid.Row="1" Margin="16,8,16,0"
+                    Title="發生錯誤" Severity="Error" IsClosable="True"
+                    Message="{Binding LastError}"
+                    IsOpen="{Binding HasError, Mode=TwoWay}" />
+
+        <!-- ===== 導覽與頁面 ===== -->
+        <ui:NavigationView x:Name="RootNavigation" Grid.Row="2"
+                           PaneDisplayMode="LeftFluent"
+                           IsBackButtonVisible="Collapsed"
+                           IsPaneToggleVisible="False"
+                           FrameMargin="0"
+                           TransitionDuration="150">
+            <ui:NavigationView.MenuItems>
+                <ui:NavigationViewItem Content="監控" Icon="{ui:SymbolIcon Board24}" TargetPageType="{x:Type pages:DashboardPage}" />
+                <ui:NavigationViewItem Content="標籤" Icon="{ui:SymbolIcon Tag24}" TargetPageType="{x:Type pages:MappingPage}" />
+                <ui:NavigationViewItem Content="日誌" Icon="{ui:SymbolIcon DocumentBulletList24}" TargetPageType="{x:Type pages:LogPage}" />
+            </ui:NavigationView.MenuItems>
+            <ui:NavigationView.FooterMenuItems>
+                <ui:NavigationViewItem Content="設定" Icon="{ui:SymbolIcon Settings24}" TargetPageType="{x:Type pages:SettingsPage}" />
+            </ui:NavigationView.FooterMenuItems>
+        </ui:NavigationView>
+
+        <!-- ===== 狀態列 ===== -->
+        <Border Grid.Row="3" Padding="16,6"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                    <Border Style="{StaticResource Pill}"
+                            Background="{Binding DaConnected, Converter={StaticResource BoolToStatusBrush}, ConverterParameter=background}">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="PlugConnected24" FontSize="14" Margin="0,0,6,0"
+                                           Foreground="{Binding DaConnected, Converter={StaticResource BoolToStatusBrush}}" />
+                            <TextBlock Text="{Binding DaText}" FontSize="12"
+                                       Foreground="{Binding DaConnected, Converter={StaticResource BoolToStatusBrush}}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Pill}" Margin="8,0,0,0"
+                            Background="{Binding UaRunning, Converter={StaticResource BoolToStatusBrush}, ConverterParameter=background}">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="Server24" FontSize="14" Margin="0,0,6,0"
+                                           Foreground="{Binding UaRunning, Converter={StaticResource BoolToStatusBrush}}" />
+                            <TextBlock Text="{Binding UaText}" FontSize="12"
+                                       Foreground="{Binding UaRunning, Converter={StaticResource BoolToStatusBrush}}" />
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Margin="20,0,0,0" VerticalAlignment="Center" FontSize="12"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                        <Run Text="標籤" /><Run Text=" " /><Run Text="{Binding ActiveTagCount, Mode=OneWay}" FontWeight="SemiBold" /><Run Text=" / " /><Run Text="{Binding TagCount, Mode=OneWay}" />
+                    </TextBlock>
+                    <TextBlock Margin="16,0,0,0" VerticalAlignment="Center" FontSize="12"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                        <Run Text="客戶端 " /><Run Text="{Binding ClientCount, Mode=OneWay}" FontWeight="SemiBold" />
+                    </TextBlock>
+                    <TextBlock Margin="16,0,0,0" VerticalAlignment="Center" FontSize="12"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                        <Run Text="{Binding UpdatesPerSecond, Mode=OneWay, StringFormat={}{0:0.0}}" FontWeight="SemiBold" /><Run Text=" 更新/秒" />
+                    </TextBlock>
+                    <Border Style="{StaticResource Pill}" Margin="16,0,0,0"
+                            Background="{DynamicResource StatusBadBackgroundBrush}"
+                            Visibility="{Binding ErrorCount, Converter={StaticResource CountToVisibility}, ConverterParameter=nonzero}">
+                        <TextBlock FontSize="12" Foreground="{DynamicResource StatusBadBrush}">
+                            <Run Text="錯誤 " /><Run Text="{Binding ErrorCount, Mode=OneWay}" FontWeight="SemiBold" />
+                        </TextBlock>
+                    </Border>
+                </StackPanel>
+
+                <TextBlock DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="12"
+                           Style="{StaticResource MonoText}"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="{Binding Clock, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}" />
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>
